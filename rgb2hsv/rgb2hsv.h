@@ -19,7 +19,7 @@ void applyHSVAdjustments(unsigned char* image, std::vector<float>& hsvImage, int
         float h = hsvImage[i * 3] + hueAdjust;
         float s = std::clamp(hsvImage[i * 3 + 1] + saturationAdjust, 0.0f, 1.0f);
         float v = std::clamp(hsvImage[i * 3 + 2] + brightnessAdjust, 0.0f, 1.0f);
-        
+
         float r, g, b;
         HSVtoRGB(h, s, v, r, g, b);
 
