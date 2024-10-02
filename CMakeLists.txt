@@ -20,32 +20,35 @@ if (WIN32)
     # set(GLUT_LIBRARIES "${CMAKE_SOURCE_DIR}/vcpkg_installed/x64-windows/lib/freeglut.lib")
     # include_directories("${CMAKE_SOURCE_DIR}/vcpkg_installed/x64-windows/include")
 
-elseif(APPLE)
-    # Настройки для macOS
-    find_package(GLUT REQUIRED)
-    include_directories(${GLUT_INCLUDE_DIRS})
-    set(GLUT_LIBRARIES "-framework GLUT -framework OpenGL")
-else()
-    # Настройки для Linux
-    find_package(GLUT REQUIRED)
-    include_directories(${GLUT_INCLUDE_DIRS})
+#elseif(APPLE)
+#    # Настройки для macOS
+#    find_package(GLUT REQUIRED)
+#    include_directories(${GLUT_INCLUDE_DIRS})
+#    set(GLUT_LIBRARIES "-framework GLUT -framework OpenGL")
+#else()
+#    # Настройки для Linux
+#    find_package(GLUT REQUIRED)
+#    include_directories(${GLUT_INCLUDE_DIRS})
 endif()
 
 add_executable(computer-graphics main.cpp
-        draw_graph.h
+        lab1/draw_graph.h
         includes.h
-        rgb2hsv/rgb2hsv.h
+        lab2/rgb2hsv/rgb2hsv.h
         include/stb_image.h
         include/stb_image_write.h
-        rgb2hsv/load_image.h
-        rgb2hsv/create_sliders.h
+        lab2/rgb2hsv/load_image.h
+        lab2/rgb2hsv/create_sliders.h
         include/imgui/imgui.cpp
         include/imgui/imgui_draw.cpp
         include/imgui/imgui_tables.cpp
         include/imgui/imgui_widgets.cpp
         include/imgui/backends/imgui_impl_opengl3.cpp
         include/imgui/backends/imgui_impl_glfw.cpp
-        rgb2hsv/converters.h
+        lab2/rgb2hsv/converters.h
+        lab3/task2/draw_bresenham_line.h
+        lab3/task2/create_line_controls.h
+        lab3/task2/handle_mouse_click_on_image.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})

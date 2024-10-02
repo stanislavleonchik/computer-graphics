@@ -3,7 +3,7 @@
 
 #include "imgui.h"
 
-void createSliders(float& hue, float& saturation, float& brightness) {
+void create_sliders(float& hue, float& saturation, float& brightness) {
     ImGui::Begin("HSV Controls");
 
     ImGui::SliderFloat("Hue", &hue, 0.0f, 360.0f);

@@ -15,7 +15,6 @@
 #include <limits>
 #include <string>
 #include <random>
-#include <glut.h>
 #include <queue>
 #include <stack>
 #include <deque>
@@ -23,6 +22,19 @@
 #include <list>
 #include <set>
 #include <map>
+
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <GLFW/glfw3.h>
+
+#include "lab2/rgb2hsv/converters.h"
+#include "lab2/rgb2hsv/load_image.h"
+#include "lab2/rgb2hsv/create_sliders.h"
+
+#include "lab3/task2/create_line_controls.h"
+#include "lab3/task2/draw_bresenham_line.h"
+
 #define watch(x) cerr << "\n" << (#x) << " is " << (x) << endl
 #define print(x) cerr << endl; for (auto a: x) cerr << (a) << " "; cerr << endl
 #define alle(x) (x).begin(), (x).end()
