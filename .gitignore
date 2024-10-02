@@ -35,3 +35,7 @@
 /cmake-build-debug/
 .DS_Store
 output/output.png
+/.vs
+/out/build/x64-Debug
+/Lab02_1_Mochalova/Lab02WinF/obj/Release/net8.0-windows
+/.gitignore
