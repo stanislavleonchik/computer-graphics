@@ -49,6 +49,8 @@ add_executable(computer-graphics main.cpp
         lab3/task2/draw_bresenham_line.h
         lab3/task2/create_line_controls.h
         lab3/task2/handle_mouse_click_on_image.h
+        lab3/task2/create_tools.h
+        lab3/task2/wu.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})

@@ -40,6 +40,8 @@ int main(int argc, char** argv) {
 
     float hueAdjust = 0.0f, saturationAdjust = 0.0f, brightnessAdjust = 0.0f;
 
+    tool = Tool::bresenham;
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -58,7 +60,17 @@ int main(int argc, char** argv) {
         handle_mouse_click_on_image(imagePos, imageSize, width, height);
 
         for (size_t i = 0; i < lines.size(); i += 2) {
-            draw_bresenham_line(image, width, height, channels, lines[i].first, lines[i].second, lines[i+1].first, lines[i+1].second);
+            switch (lines[i].second) {
+                case Tool::bresenham:
+                    draw_bresenham_line(image, width, height, channels, lines[i].first.first, lines[i].first.second,
+                                        lines[i + 1].first.first,
+                                        lines[i + 1].first.second, thickness);
+                    break;
+                case Tool::wu:
+                    draw_wu_line(image, width, height, channels, lines[i].first.first, lines[i].first.second,
+                                 lines[i + 1].first.first,
+                                 lines[i + 1].first.second);
+            }
         }
 
         updateTexture(textureID, image, width, height, channels);
@@ -66,7 +78,7 @@ int main(int argc, char** argv) {
         ImGui::End();
 
         create_sliders(hueAdjust, saturationAdjust, brightnessAdjust);
-
+        create_tools(tool, thickness);
         ImGui::Render();
 
         glViewport(0, 0, 1280, 720);

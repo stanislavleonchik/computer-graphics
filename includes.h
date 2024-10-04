@@ -36,6 +36,8 @@
 #include "lab3/task2/create_line_controls.h"
 #include "lab3/task2/draw_bresenham_line.h"
 #include "lab3/task2/handle_mouse_click_on_image.h"
+#include "lab3/task2/create_tools.h"
+#include "lab3/task2/wu.h"
 
 #define watch(x) cerr << "\n" << (#x) << " is " << (x) << endl
 #define print(x) cerr << endl; for (auto a: x) cerr << (a) << " "; cerr << endl
