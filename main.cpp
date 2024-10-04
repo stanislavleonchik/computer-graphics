@@ -1,5 +1,4 @@
-#include "lab1/draw_graph.h"
-#include "lab2/rgb2hsv/rgb2hsv.h"
+#include "includes.h"
 
 int main(int argc, char** argv) {
     if (!glfwInit()) {
@@ -41,8 +40,6 @@ int main(int argc, char** argv) {
 
     float hueAdjust = 0.0f, saturationAdjust = 0.0f, brightnessAdjust = 0.0f;
 
-    int x0 = 0, y0 = 0, x1 = width - 1, y1 = height - 1;
-
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -52,16 +49,26 @@ int main(int argc, char** argv) {
 
         applyHSVAdjustments(image, hsvImage, width, height, channels, hueAdjust, saturationAdjust, brightnessAdjust);
 
-        draw_bresenham_line(image, width, height, channels, x0, y0, x1, y1);
+        ImGui::Begin("Editor");
+
+        ImVec2 imageSize(width, height);
+        ImVec2 imagePos = ImGui::GetCursorScreenPos();
+        ImGui::Image((void*)(intptr_t)textureID, imageSize);
+
+        handle_mouse_click_on_image(imagePos, imageSize, width, height);
+
+        for (size_t i = 0; i < lines.size(); i += 2) {
+            draw_bresenham_line(image, width, height, channels, lines[i].first, lines[i].second, lines[i+1].first, lines[i+1].second);
+        }
 
         updateTexture(textureID, image, width, height, channels);
 
-        renderImGui(textureID, width, height);
+        ImGui::End();
 
         create_sliders(hueAdjust, saturationAdjust, brightnessAdjust);
-        create_line_controls(x0, y0, x1, y1, width, height);
 
         ImGui::Render();
+
         glViewport(0, 0, 1280, 720);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -70,10 +77,6 @@ int main(int argc, char** argv) {
 
         glfwSwapBuffers(window);
     }
-
-
-
-
 
     saveImage("/Users/controldata/GitHub/computer-graphics/output/output.png", image, width, height, channels);
 

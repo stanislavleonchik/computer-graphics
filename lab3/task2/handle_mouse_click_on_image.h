@@ -5,8 +5,10 @@
 
 bool isDrawing = false;
 int startX = -1, startY = -1, endX = -1, endY = -1;
+std::vector<std::pair<int, int>> lines;
 
-void handleMouseClickOnImage(ImVec2 imagePos, ImVec2 imageSize, int width, int height) {
+
+void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, int height) {
     if (ImGui::IsItemClicked()) {
         ImVec2 mousePos = ImGui::GetMousePos();
 
@@ -23,6 +25,10 @@ void handleMouseClickOnImage(ImVec2 imagePos, ImVec2 imageSize, int width, int h
         } else {
             endX = pixelX;
             endY = pixelY;
+
+            lines.push_back({startX, startY});
+            lines.push_back({endX, endY});
+
             isDrawing = false;
         }
     }
