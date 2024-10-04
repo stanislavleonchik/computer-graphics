@@ -13,4 +13,4 @@ void create_sliders(float& hue, float& saturation, float& brightness) {
     ImGui::End();
 }
 
-#endif //COMPUTER_GRAPHICS_CREATE_SLIDERS_H
+#endif

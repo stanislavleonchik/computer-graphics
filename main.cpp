@@ -59,17 +59,17 @@ int main(int argc, char** argv) {
 
         handle_mouse_click_on_image(imagePos, imageSize, width, height);
 
-        for (size_t i = 0; i < lines.size(); i += 2) {
-            switch (lines[i].second) {
+        for (size_t i = 0; i < lines.size(); ++i) {
+            switch (lines[i].tool) {
                 case Tool::bresenham:
-                    draw_bresenham_line(image, width, height, channels, lines[i].first.first, lines[i].first.second,
-                                        lines[i + 1].first.first,
-                                        lines[i + 1].first.second, thickness);
+                    draw_bresenham_line(image, width, height, channels, lines[i].x0, lines[i].y0,
+                                        lines[i].x1,
+                                        lines[i].y1, lines[i].thickness);
                     break;
                 case Tool::wu:
-                    draw_wu_line(image, width, height, channels, lines[i].first.first, lines[i].first.second,
-                                 lines[i + 1].first.first,
-                                 lines[i + 1].first.second);
+                    draw_wu_line(image, width, height, channels, lines[i].x0, lines[i].y0,
+                                 lines[i].x1,
+                                 lines[i].y1, lines[i].thickness);
             }
         }
 

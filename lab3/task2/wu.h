@@ -21,7 +21,9 @@ void setPixel(unsigned char* image, int width, int height, int channels, int x, 
     int index = (y * width + x) * channels;
 
     for (int c = 0; c < 3; ++c) {
-        image[index + c] = (unsigned char)(image[index + c] * (1.0f - brightness));
+        unsigned char original = image[index + c];
+        unsigned char value = (unsigned char)(original * (1.0f - brightness));
+        image[index + c] = value;
     }
 
     if (channels == 4) {
@@ -29,8 +31,18 @@ void setPixel(unsigned char* image, int width, int height, int channels, int x, 
     }
 }
 
+void plot_thick_pixel(unsigned char* image, int width, int height, int channels,
+                      int x, int y, float brightness, float cur_thickness, int steep) {
+    int half_cur_thickness = (int)(cur_thickness / 2);
+    for (int t = -half_cur_thickness; t <= half_cur_thickness; ++t) {
+        int nx = x + (steep ? t : 0);
+        int ny = y + (steep ? 0 : t);
+        setPixel(image, width, height, channels, nx, ny, brightness);
+    }
+}
+
 void draw_wu_line(unsigned char* image, int width, int height, int channels,
-                  int x0, int y0, int x1, int y1) {
+                  int x0, int y0, int x1, int y1, int cur_thickness) {
     int steep = abs(y1 - y0) > abs(x1 - x0);
 
     if (steep) {
@@ -55,14 +67,6 @@ void draw_wu_line(unsigned char* image, int width, int height, int channels,
     int xpxl1 = (int)xend;
     int ypxl1 = ipart(yend);
 
-    if (steep) {
-        setPixel(image, width, height, channels, ypxl1, xpxl1, rfpart(yend) * xgap);
-        setPixel(image, width, height, channels, ypxl1 + 1, xpxl1, fpart(yend) * xgap);
-    } else {
-        setPixel(image, width, height, channels, xpxl1, ypxl1, rfpart(yend) * xgap);
-        setPixel(image, width, height, channels, xpxl1, ypxl1 + 1, fpart(yend) * xgap);
-    }
-
     float intery = yend + gradient;
 
     xend = roundf(x1);
@@ -72,23 +76,37 @@ void draw_wu_line(unsigned char* image, int width, int height, int channels,
     int ypxl2 = ipart(yend);
 
     if (steep) {
-        setPixel(image, width, height, channels, ypxl2, xpxl2, rfpart(yend) * xgap);
-        setPixel(image, width, height, channels, ypxl2 + 1, xpxl2, fpart(yend) * xgap);
+        plot_thick_pixel(image, width, height, channels, ypxl1, xpxl1, rfpart(yend) * xgap, cur_thickness, steep);
+        plot_thick_pixel(image, width, height, channels, ypxl1 + 1, xpxl1, fpart(yend) * xgap, cur_thickness, steep);
+
+        plot_thick_pixel(image, width, height, channels, ypxl2, xpxl2, rfpart(yend) * xgap, cur_thickness, steep);
+        plot_thick_pixel(image, width, height, channels, ypxl2 + 1, xpxl2, fpart(yend) * xgap, cur_thickness, steep);
     } else {
-        setPixel(image, width, height, channels, xpxl2, ypxl2, rfpart(yend) * xgap);
-        setPixel(image, width, height, channels, xpxl2, ypxl2 + 1, fpart(yend) * xgap);
+        plot_thick_pixel(image, width, height, channels, xpxl1, ypxl1, rfpart(yend) * xgap, cur_thickness, steep);
+        plot_thick_pixel(image, width, height, channels, xpxl1, ypxl1 + 1, fpart(yend) * xgap, cur_thickness, steep);
+
+        plot_thick_pixel(image, width, height, channels, xpxl2, ypxl2, rfpart(yend) * xgap, cur_thickness, steep);
+        plot_thick_pixel(image, width, height, channels, xpxl2, ypxl2 + 1, fpart(yend) * xgap, cur_thickness, steep);
     }
 
     if (steep) {
         for (int x = xpxl1 + 1; x < xpxl2; x++) {
-            setPixel(image, width, height, channels, ipart(intery), x, rfpart(intery));
-            setPixel(image, width, height, channels, ipart(intery) + 1, x, fpart(intery));
+            float brightness1 = rfpart(fpart(intery));
+            float brightness2 = fpart(fpart(intery));
+
+            plot_thick_pixel(image, width, height, channels, ipart(intery), x, brightness1, cur_thickness, steep);
+            plot_thick_pixel(image, width, height, channels, ipart(intery) + 1, x, brightness2, cur_thickness, steep);
+
             intery += gradient;
         }
     } else {
         for (int x = xpxl1 + 1; x < xpxl2; x++) {
-            setPixel(image, width, height, channels, x, ipart(intery), rfpart(intery));
-            setPixel(image, width, height, channels, x, ipart(intery) + 1, fpart(intery));
+            float brightness1 = rfpart(fpart(intery));
+            float brightness2 = fpart(fpart(intery));
+
+            plot_thick_pixel(image, width, height, channels, x, ipart(intery), brightness1, cur_thickness, steep);
+            plot_thick_pixel(image, width, height, channels, x, ipart(intery) + 1, brightness2, cur_thickness, steep);
+
             intery += gradient;
         }
     }

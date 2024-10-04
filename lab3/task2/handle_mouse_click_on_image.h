@@ -10,9 +10,18 @@ enum Tool {
     wu
 };
 
+struct line {
+    int x0;
+    int y0;
+    int x1;
+    int y1;
+    Tool tool;
+    int thickness;
+};
+
 bool isDrawing = false;
 int startX = -1, startY = -1, endX = -1, endY = -1;
-vector<pair<pair<int, int>, Tool>> lines;
+vector<line> lines;
 
 auto tool = Tool::standby;
 int thickness = 1;
@@ -36,8 +45,7 @@ void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, i
                 endX = pixelX;
                 endY = pixelY;
 
-                lines.push_back({{startX, startY}, tool});
-                lines.push_back({{endX, endY}, tool});
+                lines.emplace_back(startX, startY, endX, endY, tool, thickness);
 
                 isDrawing = false;
             }
