@@ -25,6 +25,13 @@ void create_tools(Tool& cur_tool, int& cur_thickness) {
         }
         cur_tool = Tool::polygon;
     }
+    if (ImGui::Button("Clear Polygons")) {
+        isDrawing = false;
+        if (!polygons.empty()) {
+            polygons.clear();
+        }
+        cur_tool = Tool::polygon;
+    }
     ImGui::SliderInt("Thickness", &cur_thickness, 1, 8);
 
     ImGui::End();
