@@ -52,6 +52,10 @@ add_executable(computer-graphics main.cpp
         lab3/task2/create_tools.h
         lab3/task2/wu.h
         editor.h
+        lab4/tools.h
+        lab3/task2/line.h
+        lab4/Polygon.h
+        lab4/Point.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})

@@ -1,6 +1,8 @@
 #ifndef COMPUTER_GRAPHICS_INCLUDES_H
 #define COMPUTER_GRAPHICS_INCLUDES_H
 
+const int display_w = 1280, display_h = 720;
+
 #define USE_MATH_DEFINES
 
 #include <unordered_set>
@@ -28,12 +30,18 @@
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
 
+using namespace std;
+
 #include "lab2/rgb2hsv/converters.h"
 #include "lab2/rgb2hsv/load_image.h"
 #include "lab2/rgb2hsv/rgb2hsv.h"
 #include "lab2/rgb2hsv/create_sliders.h"
 #include "lab3/task2/create_line_controls.h"
 
+#include "lab4/tools.h"
+#include "lab3/task2/line.h"
+#include "lab4/Point.h"
+#include "lab4/Polygon.h"
 #include "lab3/task2/draw_bresenham_line.h"
 #include "lab3/task2/handle_mouse_click_on_image.h"
 #include "lab3/task2/create_tools.h"
@@ -53,6 +61,5 @@
 using ull = unsigned long long;
 using ll = long long;
 
-using namespace std;
 
 #endif //COMPUTER_GRAPHICS_INCLUDES_H

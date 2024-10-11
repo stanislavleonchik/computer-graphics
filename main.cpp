@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "LemotkPaint", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(display_w, display_h, "LemotkPaint", NULL, NULL);
     if (!window) {
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
         }
 
         ImGui::Render();
-        glViewport(0, 0, 1280, 720);
+        glViewport(0, 0, display_w, display_h);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
