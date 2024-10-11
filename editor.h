@@ -25,7 +25,21 @@ float hueAdjust = 0.0f, saturationAdjust = 0.0f, brightnessAdjust = 0.0f;
 
 void create_editor(GLuint textureID) {
     applyHSVAdjustments(image, hsvImage, width, height, channels, hueAdjust, saturationAdjust, brightnessAdjust);
-    ImGui::Begin("Editor");
+
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoMove
+                                    | ImGuiWindowFlags_NoResize
+                                    | ImGuiWindowFlags_NoCollapse
+                                    | ImGuiWindowFlags_NoTitleBar
+                                    | ImGuiWindowFlags_NoBringToFrontOnFocus
+                                    | ImGuiWindowFlags_NoScrollbar;
+    ImVec2 windowSize = ImGui::GetWindowSize();
+
+    float menuHeight = ImGui::GetFrameHeightWithSpacing();
+
+    ImGui::SetNextWindowPos(ImVec2(0, menuHeight));
+    ImGui::SetNextWindowSize(ImVec2(display_w, display_h - menuHeight));
+
+    ImGui::Begin("Editor", nullptr, window_flags);
 
     ImVec2 imageSize(width, height);
     ImVec2 imagePos = ImGui::GetCursorScreenPos();
@@ -44,6 +58,27 @@ void create_editor(GLuint textureID) {
                 draw_wu_line(image, width, height, channels, lines[i].x0, lines[i].y0,
                              lines[i].x1,
                              lines[i].y1, lines[i].thickness);
+        }
+    }
+
+    for (Polygon& pol: polygons) {
+        if (pol.v.size() < 2)
+            draw_wu_line(image, width, height, channels, pol.v[0].x, pol.v[0].y,
+                         pol.v[0].x,
+                         pol.v[0].y, 3);
+        else {
+            auto firstP = pol.v[0];
+            for (int i = 1; i < pol.v.size(); ++i) {
+                draw_wu_line(image, width, height, channels, firstP.x, firstP.y,
+                             pol.v[i].x,
+                             pol.v[i].y, 3);
+                firstP = pol.v[i];
+            }
+            if (pol.completed) {
+                draw_wu_line(image, width, height, channels, firstP.x, firstP.y,
+                             pol.v[0].x,
+                             pol.v[0].y, 3);
+            }
         }
     }
 
