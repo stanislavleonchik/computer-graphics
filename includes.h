@@ -30,14 +30,16 @@
 
 #include "lab2/rgb2hsv/converters.h"
 #include "lab2/rgb2hsv/load_image.h"
-#include "lab2/rgb2hsv/create_sliders.h"
 #include "lab2/rgb2hsv/rgb2hsv.h"
-
+#include "lab2/rgb2hsv/create_sliders.h"
 #include "lab3/task2/create_line_controls.h"
+
 #include "lab3/task2/draw_bresenham_line.h"
 #include "lab3/task2/handle_mouse_click_on_image.h"
 #include "lab3/task2/create_tools.h"
 #include "lab3/task2/wu.h"
+
+#include "editor.h"
 
 #define watch(x) cerr << "\n" << (#x) << " is " << (x) << endl
 #define print(x) cerr << endl; for (auto a: x) cerr << (a) << " "; cerr << endl
