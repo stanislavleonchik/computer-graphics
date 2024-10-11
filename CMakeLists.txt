@@ -51,6 +51,7 @@ add_executable(computer-graphics main.cpp
         lab3/task2/handle_mouse_click_on_image.h
         lab3/task2/create_tools.h
         lab3/task2/wu.h
+        editor.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
