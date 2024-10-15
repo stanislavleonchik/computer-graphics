@@ -5,7 +5,9 @@ enum Tool {
     standby,
     bresenham,
     wu,
-    polygon
+    polygon,
+    point_orientation_to_edge_check,
+    point_inside_polygon,
 };
 
 #endif

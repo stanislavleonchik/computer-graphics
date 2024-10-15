@@ -4,6 +4,8 @@
 #include "../includes.h"
 
 void create_tools(Tool& cur_tool, int& cur_thickness) {
+    extern int leftOrRight;
+    extern int isInside;
     ImGui::Begin("Tools");
 
     if (ImGui::Button("Spectate")) {
@@ -17,6 +19,28 @@ void create_tools(Tool& cur_tool, int& cur_thickness) {
     if (ImGui::Button("Wu")) {
         isDrawing = false;
         cur_tool = Tool::wu;
+    }
+    if (ImGui::Button("Check point to edge position")) {
+        leftOrRight = 2;
+        isDrawing = false;
+        cur_tool = Tool::point_orientation_to_edge_check;
+    }
+    if (cur_tool == Tool::point_orientation_to_edge_check) {
+        ImGui::BeginDisabled();
+        ImGui::RadioButton("Left", &leftOrRight, 0); // Если selected == 0, будет выбрана эта кнопка
+        ImGui::RadioButton("Right", &leftOrRight, 1); // Если selected == 1, будет выбрана эта кнопка
+        ImGui::EndDisabled();
+
+    }
+    if (ImGui::Button("Check point inside polygon")) {
+        isInside = 0;
+        isDrawing = false;
+        cur_tool = Tool::point_inside_polygon;
+    }
+    if (cur_tool == Tool::point_inside_polygon) {
+        ImGui::BeginDisabled();
+        ImGui::RadioButton("Inside", &isInside, 1); // Если selected == 0, будет выбрана эта кнопка
+        ImGui::EndDisabled();
     }
     if (ImGui::Button("Polygon")) {
         isDrawing = false;

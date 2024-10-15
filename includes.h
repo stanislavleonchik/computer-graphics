@@ -42,6 +42,8 @@ using namespace std;
 #include "lab3/task2/line.h"
 #include "lab4/Point.h"
 #include "lab4/Polygon.h"
+#include "lab4/CheckPointPositionRelativeEdge.h"
+#include "lab4/IsPointInsidePolygon.h"
 #include "lab3/task2/draw_bresenham_line.h"
 #include "lab3/task2/handle_mouse_click_on_image.h"
 #include "lab3/task2/create_tools.h"
