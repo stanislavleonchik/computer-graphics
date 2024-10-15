@@ -4,7 +4,11 @@ project(computer-graphics)
 set(CMAKE_CXX_STANDARD 26)
 
 find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
+add_library(glfw3 STATIC IMPORTED)
+set_target_properties(glfw3 PROPERTIES
+    IMPORTED_LOCATION "D:/VS Projects/libs/glfw3.lib"
+    INTERFACE_INCLUDE_DIRECTORIES "D:/VS Projects/libs/includes"
+)
 
 include_directories(${OPENGL_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -56,7 +60,9 @@ add_executable(computer-graphics main.cpp
         lab3/task2/line.h
         lab4/Polygon.h
         lab4/Point.h
+	lab4/affine_tools.h
+	lab4/affine_transformations.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
-target_link_libraries(computer-graphics OpenGL::GL glfw)
+target_link_libraries(computer-graphics OpenGL::GL glfw3)

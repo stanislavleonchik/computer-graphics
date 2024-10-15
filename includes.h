@@ -46,6 +46,8 @@ using namespace std;
 #include "lab3/task2/handle_mouse_click_on_image.h"
 #include "lab3/task2/create_tools.h"
 #include "lab3/task2/wu.h"
+#include "lab4/affine_tools.h"
+#include "lab4/affine_transformations.h"
 
 #include "editor.h"
 

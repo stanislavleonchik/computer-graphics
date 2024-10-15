@@ -29,6 +29,7 @@ int main(int argc, char** argv) {
     bool showEditor = false;
     bool showSliders = false;
     bool showTools = false;
+    bool affine_t = false;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         ImGui_ImplOpenGL3_NewFrame();
@@ -56,6 +57,9 @@ int main(int argc, char** argv) {
                 if (ImGui::MenuItem("Show Drawing Tools", NULL, showTools)) {
                     showTools = !showTools;
                 }
+                if (ImGui::MenuItem("Make Affine Transformations", NULL, affine_t)) {
+                    affine_t = !affine_t;
+                }
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
@@ -69,6 +73,9 @@ int main(int argc, char** argv) {
         }
         if (showTools) {
             create_tools(tool, thickness);
+        }
+        if (affine_t) {
+            create_affine_tools();
         }
 
         ImGui::Render();
