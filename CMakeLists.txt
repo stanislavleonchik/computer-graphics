@@ -56,6 +56,8 @@ add_executable(computer-graphics main.cpp
         lab3/task2/line.h
         lab4/Polygon.h
         lab4/Point.h
+        lab4/CheckPointPositionRelativeEdge.h
+        lab4/IsPointInsidePolygon.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
