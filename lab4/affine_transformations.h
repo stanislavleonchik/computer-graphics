@@ -10,7 +10,7 @@ class AffineMatrix {
 
 private:
 	matrixf mtr;
-	Polygon* cur_poly;
+	unsigned int cur_poly;
 	ImVec2 point;
 
 	void reset_mtr() {
@@ -38,8 +38,8 @@ private:
 
 		for (size_t i = 0; i < verts.size(); i++)
 		{
-			cur_poly->v[i].x = verts[i][0];
-			cur_poly->v[i].y = verts[i][1];
+			polygons[cur_poly].v[i].x = verts[i][0];
+			polygons[cur_poly].v[i].y = verts[i][1];
 		}
 	}
 
@@ -73,7 +73,7 @@ public:
 	void make_offset(int x, int y) {
 
 		if (!polygons.empty())
-			cur_poly = &polygons[polygons.size() - 1];
+			cur_poly = polygons.size() - 1;
 		else
 			return;
 
@@ -81,7 +81,7 @@ public:
 		mtr[2][1] = y;
 
 		vector<vector<float>> verts;
-		for(auto x: (*cur_poly).v)
+		for(auto x: polygons[cur_poly].v)
 		{
 			verts.push_back({ x.x, x.y, 1.0f });
 		}
@@ -95,24 +95,26 @@ public:
 
 	void make_turning(int turning_val) {
 		if (!polygons.empty())
-			cur_poly = &polygons[polygons.size() - 1];
+			cur_poly = polygons.size() - 1;
 		else
 			return;
 
 
 		vector<vector<float>> verts;
-		for (auto x : (*cur_poly).v)
+		for (auto x : polygons[cur_poly].v)
 		{
 			verts.push_back({ x.x, x.y, 1.0f });
 		}
 
 		ImVec2 center;
 		if (around_center) {
-			for (auto v: (*cur_poly).v)
+			for (auto v: verts)
 			{
-				center.x += v.x;
-				center.y += v.y;
+				center.x += v[0];
+				center.y += v[1];
 			}
+			center.x = center.x / verts.size();
+			center.y = center.y / verts.size();
 		}
 		else
 			center = point;
@@ -120,7 +122,7 @@ public:
 		matrixf offset(3);
 		for (size_t i = 0; i < 3; i++)
 		{
-			offset.resize(3);
+			offset[i].resize(3);
 			offset[i][i] = 1;
 		}
 		offset[2][0] = -center.x;
@@ -147,22 +149,22 @@ public:
 
 	void make_scaling(float scaling_val) {
 		if (!polygons.empty())
-			cur_poly = &polygons[polygons.size() - 1];
+			cur_poly = polygons.size() - 1;
 		else
 			return;
 
 		vector<vector<float>> verts;
-		for (auto x : (*cur_poly).v)
+		for (auto x : polygons[cur_poly].v)
 		{
 			verts.push_back({ x.x, x.y, 1.0f });
 		}
 		
 		ImVec2 center;
 		if (around_center) {
-			for (auto v : (*cur_poly).v)
+			for (auto v : verts)
 			{
-				center.x += v.x;
-				center.y += v.y;
+				center.x += v[0];
+				center.y += v[1];
 			}
 		}
 		else
@@ -195,10 +197,7 @@ public:
 
 	void set_center_point(ImVec2 p) {
 		point = p;
-		
 	}
 };
-
-
 
 #endif // !AFFINE_TRANSFORMATIONS_H

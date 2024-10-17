@@ -15,6 +15,7 @@ bool show_scaling_window = false; // Флаг для показа окна углового смещения
 //bool show_warinig_window = false;
 int offset_x = 0; // Значение смещения по X
 int offset_y = 0; // Значение смещения по Y
+int turning_value = 0;
 
 string scaling_opt = "Scaling Options";
 string turning_opt = "Turning Options";
@@ -113,7 +114,6 @@ void offset_window() {
 void turning_window() {
     ImGui::Begin("Turning Settings", &show_turning_window); // Включаем кнопку закрытия окна
 
-    int turning_value = 0;
     ImGui::InputInt("The angle in radians", &turning_value);
 
 
