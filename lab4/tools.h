@@ -5,7 +5,9 @@ enum Tool {
     standby,
     bresenham,
     wu,
-    polygon
+    polygon,
+    affine,
+    find_intersection_point
 };
 
 #endif

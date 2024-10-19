@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
                 if (ImGui::MenuItem("Show Drawing Tools", NULL, showTools)) {
                     showTools = !showTools;
                 }
-                if (ImGui::MenuItem("Make Affine Transformations", NULL, affine_t)) {
+                if (ImGui::MenuItem("Show Affine Tools", NULL, affine_t)) {
                     affine_t = !affine_t;
                 }
                 ImGui::EndMenu();

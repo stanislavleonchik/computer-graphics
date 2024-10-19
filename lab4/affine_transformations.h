@@ -2,7 +2,7 @@
 #define AFFINE_TRANSFORMATIONS_H
 
 #include "../includes.h"
-#include "../lab4/affine_tools.h"
+#include "../lab3/task2/handle_mouse_click_on_image.h"
 
 using matrixf = vector<vector<float>>;
 
@@ -28,30 +28,39 @@ private:
 
 	void apply(vector<vector<float>> verts) {
 
-		for (auto& v: verts)
+		vector<vector<float>> new_verts(3);
+		for (size_t i = 0; i < verts.size(); i++)
+		{
+			new_verts[i].resize(3);
+		}
+
+		for (size_t k = 0; k < verts.size();k++)
 		{
 			for (size_t i = 0; i < 3; i++)
 			{
-				v[i] = v[i] * (mtr[i][0] + mtr[i][1] + mtr[i][2]);
+				new_verts[k][i] = verts[k][0] * mtr[0][i] + verts[k][1] * mtr[1][i] + verts[k][2] * mtr[2][i];
 			}
 		}
 
+
 		for (size_t i = 0; i < verts.size(); i++)
 		{
-			polygons[cur_poly].v[i].x = verts[i][0];
-			polygons[cur_poly].v[i].y = verts[i][1];
+			polygons[cur_poly].v[i].x = new_verts[i][0];
+			polygons[cur_poly].v[i].y = new_verts[i][1];
 		}
 	}
 
 	matrixf prod(matrixf m1, matrixf m2) {
 
 		matrixf res(3);
-		for (size_t i = 0; i < 3; i++)
-		{
+		for (size_t i = 0; i < 3; i++) {
 			res[i].resize(3);
 			for (size_t j = 0; j < 3; j++)
 			{
-				res[i][j] = m1[i][j] * m2[i][j];
+				for (size_t k = 0; k < 3; k++)
+				{
+					res[i][j] += m1[i][k] * m2[k][j];
+				}
 			}
 		}
 		return res;
@@ -128,6 +137,7 @@ public:
 		offset[2][0] = -center.x;
 		offset[2][1] = -center.y;
 
+		turning_val = turning_val * 3.14159 / 180;
 		mtr[0][0] = cos(turning_val);
 		mtr[0][1] = sin(turning_val);
 		mtr[1][0] = -sin(turning_val);
@@ -147,7 +157,7 @@ public:
 
 
 
-	void make_scaling(float scaling_val) {
+	void make_scaling(float scaling_val_x, float scaling_val_y) {
 		if (!polygons.empty())
 			cur_poly = polygons.size() - 1;
 		else
@@ -166,6 +176,8 @@ public:
 				center.x += v[0];
 				center.y += v[1];
 			}
+			center.x = center.x / verts.size();
+			center.y = center.y / verts.size();
 		}
 		else
 			center = point;
@@ -173,14 +185,14 @@ public:
 		matrixf offset(3);
 		for (size_t i = 0; i < 3; i++)
 		{
-			offset.resize(3);
+			offset[i].resize(3);
 			offset[i][i] = 1;
 		}
 		offset[2][0] = -center.x;
 		offset[2][1] = -center.y;
 
-		mtr[0][0] = scaling_val;
-		mtr[1][1] = scaling_val;
+		mtr[0][0] = scaling_val_x;
+		mtr[1][1] = scaling_val_y;
 
 		mtr = prod(offset, mtr);
 

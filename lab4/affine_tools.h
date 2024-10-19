@@ -2,7 +2,7 @@
 #define AFFINE_TOOLS_H
 
 #include "../includes.h"
-#include"../lab4/affine_transformations.h"
+#include "../lab4/affine_transformations.h"
 
 void offset_window();
 void popup(string opt_name);
@@ -12,41 +12,45 @@ void scaling_window();
 bool show_offset_window = false; // Флаг для показа окна смещения
 bool show_turning_window = false; // Флаг для показа окна углового смещения
 bool show_scaling_window = false; // Флаг для показа окна углового смещения
-//bool show_warinig_window = false;
+bool is_setpoint = false;
+
 int offset_x = 0; // Значение смещения по X
 int offset_y = 0; // Значение смещения по Y
 int turning_value = 0;
+float scaling_value_x = 0;
+float scaling_value_y = 0;
 
 string scaling_opt = "Scaling Options";
 string turning_opt = "Turning Options";
 //string warning;
 
 AffineMatrix amatrix;
-
-// Размеры кнопок
-ImVec2 button_size(75.0f, 25.0f); // Ширина и высота кнопки
+ImVec2 center_point;
 
 void create_affine_tools() {
 
-    ImGui::SetNextWindowSize(ImVec2(200, 150));
 
     ImGui::Begin("Affine tools");
 
-    if (ImGui::Button("offset", button_size)) {
+    if (ImGui::Button("offset")) {
         show_offset_window = true;
     }
-    if (ImGui::Button("Turning", button_size)) {
+    if (ImGui::Button("Turning")) {
         ImGui::OpenPopup(turning_opt.c_str()); // Открываем всплывающее окно с опциями
 
     }
 
-    if (ImGui::Button("Scaling", button_size)) {
+    if (ImGui::Button("Scaling")) {
         ImGui::OpenPopup(scaling_opt.c_str());
     }
 
     popup(scaling_opt);
     popup(turning_opt);
     
+    if (ImGui::IsItemClicked()) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+        amatrix.set_center_point(mousePos);
+    }
 
     ImGui::End();
 
@@ -75,16 +79,15 @@ void popup(string opt_name) {
             }
         }
         if (ImGui::Selectable("Set a point")) {
+            
             if (!show_offset_window) {
-                if (ImGui::IsItemClicked()) {
-                    ImVec2 mousePos = ImGui::GetMousePos();
-                    amatrix.set_center_point(mousePos);
-                    amatrix.around_center = false;
-                    if (opt_name == turning_opt)
-                        show_turning_window = true;
-                    else
-                        show_scaling_window = true;
-                }
+				tool = Tool::affine;
+				amatrix.around_center = false;
+				if (opt_name == turning_opt)
+					show_turning_window = true;
+				else
+					show_scaling_window = true;
+                
             }
         }
         ImGui::EndPopup(); // Заканчиваем создание всплывающего окна
@@ -114,12 +117,16 @@ void offset_window() {
 void turning_window() {
     ImGui::Begin("Turning Settings", &show_turning_window); // Включаем кнопку закрытия окна
 
-    ImGui::InputInt("The angle in radians", &turning_value);
+    ImGui::InputInt("The angle in degree", &turning_value);
 
 
     if (ImGui::Button("Apply")) {
-        amatrix.make_turning(turning_value);
-        show_turning_window = false;
+        if (is_setpoint || amatrix.around_center) {
+            amatrix.make_turning(turning_value);
+            show_turning_window = false;
+            is_setpoint = false;
+        }else
+        { } // было бы неплохо выводить тут уведомление что нужно установить точку
     }
 
     ImGui::SameLine();
@@ -134,15 +141,21 @@ void turning_window() {
 
 void scaling_window() {
 
-    ImGui::Begin("Scaling Settings", &show_turning_window); // Включаем кнопку закрытия окна
+    ImGui::Begin("Scaling Settings", &show_scaling_window);
 
-    float scaling_value = 0;
-    ImGui::InputFloat("The scaling", &scaling_value);
+    ImGui::InputFloat("The scaling X", &scaling_value_x);
+    ImGui::InputFloat("The scaling Y", &scaling_value_y);
 
 
     if (ImGui::Button("Apply")) {
-        amatrix.make_scaling(scaling_value);
-        show_scaling_window = false;
+        if (is_setpoint || amatrix.around_center) {
+            amatrix.make_scaling(scaling_value_x, scaling_value_y);
+            show_scaling_window = false;
+            is_setpoint = false;
+        }
+        else
+        {
+        } // было бы неплохо выводить тут уведомление что нужно установить точку
     }
 
     ImGui::SameLine();
