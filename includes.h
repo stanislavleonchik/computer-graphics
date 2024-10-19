@@ -53,7 +53,6 @@ using namespace std;
 #include "lab4/edge_intersection.h"
 #include "lab4/message_box.h"
 
-
 #include "editor.h"
 
 #define watch(x) cerr << "\n" << (#x) << " is " << (x) << endl
@@ -68,7 +67,4 @@ using namespace std;
 using ull = unsigned long long;
 using ll = long long;
 
-
-
-
-#endif //COMPUTER_GRAPHICS_INCLUDES_H
+#endif

@@ -4,18 +4,22 @@ project(computer-graphics)
 set(CMAKE_CXX_STANDARD 26)
 
 find_package(OpenGL REQUIRED)
-add_library(glfw3 STATIC IMPORTED)
-set_target_properties(glfw3 PROPERTIES
-    IMPORTED_LOCATION "D:/VS Projects/libs/glfw3.lib"
-    INTERFACE_INCLUDE_DIRECTORIES "D:/VS Projects/libs/includes"
-)
+if (WIN32)
+	add_library(glfw3 STATIC IMPORTED)
+	set_target_properties(glfw3 PROPERTIES
+		IMPORTED_LOCATION "D:/VS Projects/libs/glfw3.lib"
+		INTERFACE_INCLUDE_DIRECTORIES "D:/VS Projects/libs/includes"
+	)
+elseif(APPLE)
+	find_package(glfw3 REQUIRED)
+endif()
+
 
 include_directories(${OPENGL_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include/imgui)
 include_directories(${CMAKE_SOURCE_DIR}/include/imgui/backends)
 
-if (WIN32)
     # Настройка для Windows
 #    set(GLUT_LIBRARIES "C:/path_to_glut/freeglut/lib/freeglut.lib")  # Укажите правильный путь
 #    include_directories("C:/path_to_glut/freeglut/include")           # Укажите путь к заголовочным файлам FreeGLUT
@@ -33,7 +37,6 @@ if (WIN32)
 #    # Настройки для Linux
 #    find_package(GLUT REQUIRED)
 #    include_directories(${GLUT_INCLUDE_DIRS})
-endif()
 
 add_executable(computer-graphics main.cpp
         lab1/draw_graph.h
@@ -60,11 +63,16 @@ add_executable(computer-graphics main.cpp
         lab3/task2/line.h
         lab4/Polygon.h
         lab4/Point.h
-	      lab4/affine_tools.h
-	      lab4/affine_transformations.h
+		lab4/affine_tools.h
+		lab4/affine_transformations.h
         lab4/CheckPointPositionRelativeEdge.h
         lab4/IsPointInsidePolygon.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
-target_link_libraries(computer-graphics OpenGL::GL glfw3)
+if (WIN32)
+	target_link_libraries(computer-graphics OpenGL::GL glfw3)
+elseif(APPLE)
+	target_link_libraries(computer-graphics OpenGL::GL glfw)
+endif()
+
