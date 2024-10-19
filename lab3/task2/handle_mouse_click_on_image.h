@@ -2,6 +2,7 @@
 #define COMPUTER_GRAPHICS_HANDLE_MOUSE_CLICK_ON_IMAGE_H
 
 #include "../includes.h"
+#include"../lab4/edge_intersection.h"
 using namespace std;
 
 bool isDrawing = false;
@@ -12,6 +13,8 @@ vector<Polygon> polygons;
 
 Tool tool = Tool::standby;
 int thickness = 1;
+
+ImVec2 IntersectionPoint;
 
 void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, int height) {
     if (ImGui::IsItemClicked()) {
@@ -36,6 +39,23 @@ void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, i
                         polygons[cur_polygon].completed = true;
                     } else
                         polygons[cur_polygon].v.emplace_back((float)pixelX, (float)pixelY);
+                }
+                break;
+            case Tool::find_intersection_point:
+                if (!isDrawing) {
+                    startX = pixelX;
+                    startY = pixelY;
+                    isDrawing = true;
+                }
+                else {
+                    endX = pixelX;
+                    endY = pixelY;
+
+                    lines.emplace_back(startX, startY, endX, endY, Tool::wu, thickness);
+                    if (lines.size() >= 2)
+                        IntersectionPoint = find_intersection(lines[lines.size() - 1], lines[lines.size() - 2]);
+
+                    isDrawing = false;
                 }
                 break;
             default:

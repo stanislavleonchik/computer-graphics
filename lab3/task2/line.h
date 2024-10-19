@@ -4,10 +4,10 @@
 #include "../includes.h"
 
 struct line {
-    int x0;
-    int y0;
-    int x1;
-    int y1;
+    float x0;
+    float y0;
+    float x1;
+    float y1;
     Tool tool;
     int thickness;
 };

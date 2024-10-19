@@ -48,6 +48,9 @@ using namespace std;
 #include "lab3/task2/wu.h"
 #include "lab4/affine_tools.h"
 #include "lab4/affine_transformations.h"
+#include "lab4/edge_intersection.h"
+#include "lab4/message_box.h"
+
 
 #include "editor.h"
 
@@ -62,6 +65,8 @@ using namespace std;
 
 using ull = unsigned long long;
 using ll = long long;
+
+
 
 
 #endif //COMPUTER_GRAPHICS_INCLUDES_H
