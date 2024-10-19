@@ -58,6 +58,10 @@ void create_editor(GLuint textureID) {
                 draw_wu_line(image, width, height, channels, lines[i].x0, lines[i].y0,
                              lines[i].x1,
                              lines[i].y1, lines[i].thickness);
+                break;
+            case Tool::fill:
+                fill_all(image, width, height);
+                break;
         }
     }
 

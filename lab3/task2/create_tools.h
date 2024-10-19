@@ -58,6 +58,11 @@ void create_tools(Tool& cur_tool, int& cur_thickness) {
     }
     ImGui::SliderInt("Thickness", &cur_thickness, 1, 8);
 
+    if (ImGui::Button("Fill")) {
+        isDrawing = false;
+        cur_tool = Tool::fill;
+    }
+
     ImGui::End();
 }
 

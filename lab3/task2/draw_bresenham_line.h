@@ -40,4 +40,13 @@ void draw_bresenham_line(unsigned char* image, int width, int height, int channe
     }
 }
 
+void fill_all(unsigned char* image, int width, int height) {
+    for (int x = 0; x < width; ++x)
+        for (int y = 0; y < height * 3; ++y) {
+            image[width * y + x] = 30;
+            image[width * y + x + 1] = 31;
+            image[width * y + x + 2] = 33;
+        }
+}
+
 #endif
