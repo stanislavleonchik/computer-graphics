@@ -2,12 +2,14 @@
 #define COMPUTER_GRAPHICS_CREATE_TOOLS_H
 
 #include "../includes.h"
+#include "../lab4/message_box.h"
 
 void create_tools(Tool& cur_tool, int& cur_thickness) {
     extern int leftOrRight;
     extern int isInside;
     ImGui::Begin("Tools");
 
+    
     if (ImGui::Button("Spectate")) {
         isDrawing = false;
         cur_tool = Tool::standby;
@@ -56,7 +58,18 @@ void create_tools(Tool& cur_tool, int& cur_thickness) {
         }
         cur_tool = Tool::polygon;
     }
+    if (ImGui::Button("2 lines intersection")) {
+        isDrawing = false;
+        cur_tool = Tool::find_intersection_point;
+        show_message_box = true;
+    }
+    if(cur_tool == Tool::find_intersection_point){
+        string res = "Intersection point: (" + to_string((int)round(IntersectionPoint.x)) + ", " + to_string((int)round(IntersectionPoint.y)) + ')';
+        ShowInfoWindow(res);
+    }
     ImGui::SliderInt("Thickness", &cur_thickness, 1, 8);
+
+    
 
     ImGui::End();
 }
