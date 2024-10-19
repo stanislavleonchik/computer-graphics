@@ -1,5 +1,6 @@
 #include "includes.h"
-
+int leftOrRight = 2;
+int isInside = 0;
 int main(int argc, char** argv) {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW\n";

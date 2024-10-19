@@ -10,6 +10,8 @@ size_t cur_polygon = 0;
 int startX = -1, startY = -1, endX = -1, endY = -1;
 vector<line> lines;
 vector<Polygon> polygons;
+extern int leftOrRight;
+extern int isInside;
 
 Tool tool = Tool::standby;
 int thickness = 1;
@@ -58,6 +60,18 @@ void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, i
                     isDrawing = false;
                 }
                 break;
+            case Tool::point_orientation_to_edge_check: {
+                if (lines.size() > 0) {
+                    leftOrRight = static_cast<int>(сheckPointPositionRelativeEdge(lines.back(), pixelX, pixelY));
+                }
+                break;
+            }
+            case Tool::point_inside_polygon: {
+                if (polygons.size() > 0 && polygons.back().completed) {
+                    isInside = static_cast<int>(isPointInsidePolygon(Point(pixelX, pixelY), polygons.back()));
+                }
+                break;
+            }
             default:
                 if (!isDrawing) {
                     startX = pixelX;
