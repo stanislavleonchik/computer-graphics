@@ -4,16 +4,9 @@ project(computer-graphics)
 set(CMAKE_CXX_STANDARD 26)
 
 find_package(OpenGL REQUIRED)
-if (WIN32)
-	add_library(glfw3 STATIC IMPORTED)
-	set_target_properties(glfw3 PROPERTIES
-		IMPORTED_LOCATION "D:/VS Projects/libs/glfw3.lib"
-		INTERFACE_INCLUDE_DIRECTORIES "D:/VS Projects/libs/includes"
-	)
-elseif(APPLE)
-	find_package(glfw3 REQUIRED)
-endif()
 
+add_subdirectory(external/glfw)
+include_directories(external/glfw/include)
 
 include_directories(${OPENGL_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/external)
@@ -49,9 +42,4 @@ add_executable(computer-graphics src/main.cpp
         src/models/Color.h
 )
 
-if (WIN32)
-	target_link_libraries(computer-graphics OpenGL::GL glfw3)
-elseif(APPLE)
-	target_link_libraries(computer-graphics OpenGL::GL glfw)
-endif()
-
+target_link_libraries(computer-graphics OpenGL::GL glfw)
