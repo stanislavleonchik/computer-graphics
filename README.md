@@ -19,8 +19,8 @@ brew install glfw
 *src/views* - папка для окон и логики отображения
 
 ---
-[Леончик Станислав - Лабораторная 1, задание 3 (C++ Glut OpenGL)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab1_1_Mochalova) \
-[Мочалова Екатерина - Лабораторная 2, задание 1 (C#)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/Lab02_1_Mochalova) \
-[Мочалова Екатерина - Лабораторная 2, задание 1 (C#)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/Lab02_1_Mochalova) \
-[Ткаченко Никита - Лабораторная 2, задание 2 (C#)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab2_tkachenko/lab2_comp_graph) \
-[Ткаченко Никита - Лабораторная 2, задание 2 (C#)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab2_tkachenko/lab2_comp_graph) \
+[Леончик Станислав - Лабораторная 1, задание 3 (C++ Glut OpenGL)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab1-task3-leonchik) \
+[Мочалова Екатерина - Лабораторная 2, задание 1 (C#)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab2-task1-mochalova) \
+[Мочалова Екатерина - Лабораторная 3, задание 3 (C++)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab3-task3-mochalova) \
+[Ткаченко Никита - Лабораторная 2, задание 2 (C#)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab2-task2-tkachenko) \
+[Ткаченко Никита - Лабораторная 3, задание 1 (C++)](https://github.com/stanislavleonchik/computer-graphics/tree/main/no_include_labs/lab3-task1-tkachenko) \
