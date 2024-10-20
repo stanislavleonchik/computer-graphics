@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(display_w, display_h, "LemotkPaint", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(display_w, display_h, "Lemotech", NULL, NULL);
     if (!window) {
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
