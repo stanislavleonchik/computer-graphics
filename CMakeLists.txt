@@ -7,9 +7,9 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 
 include_directories(${OPENGL_INCLUDE_DIRS})
-include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories(${CMAKE_SOURCE_DIR}/include/imgui)
-include_directories(${CMAKE_SOURCE_DIR}/include/imgui/backends)
+include_directories(${CMAKE_SOURCE_DIR}/external)
+include_directories(${CMAKE_SOURCE_DIR}/external/imgui)
+include_directories(${CMAKE_SOURCE_DIR}/external/imgui/backends)
 
 if (WIN32)
     # Настройка для Windows
@@ -31,33 +31,33 @@ if (WIN32)
 #    include_directories(${GLUT_INCLUDE_DIRS})
 endif()
 
-add_executable(computer-graphics main.cpp
-        lab1/draw_graph.h
-        includes.h
-        lab2/rgb2hsv/rgb2hsv.h
-        include/stb_image.h
-        include/stb_image_write.h
-        lab2/rgb2hsv/load_image.h
-        lab2/rgb2hsv/create_sliders.h
-        include/imgui/imgui.cpp
-        include/imgui/imgui_draw.cpp
-        include/imgui/imgui_tables.cpp
-        include/imgui/imgui_widgets.cpp
-        include/imgui/backends/imgui_impl_opengl3.cpp
-        include/imgui/backends/imgui_impl_glfw.cpp
-        lab2/rgb2hsv/converters.h
-        lab3/task2/draw_bresenham_line.h
-        lab3/task2/create_line_controls.h
-        lab3/task2/handle_mouse_click_on_image.h
-        lab3/task2/create_tools.h
-        lab3/task2/wu.h
-        editor.h
-        lab4/tools.h
-        lab3/task2/line.h
-        lab4/Polygon.h
-        lab4/Point.h
-        lab4/CheckPointPositionRelativeEdge.h
-        lab4/IsPointInsidePolygon.h
+add_executable(computer-graphics src/main.cpp
+        src/includes.h
+        src/utils/rgb_to_hsv.h
+        external/stb/stb_image.h
+        external/stb/stb_image_write.h
+        src/utils/load_image.h
+        src/views/create_sliders.h
+        external/imgui/imgui.cpp
+        external/imgui/imgui_draw.cpp
+        external/imgui/imgui_tables.cpp
+        external/imgui/imgui_widgets.cpp
+        external/imgui/backends/imgui_impl_opengl3.cpp
+        external/imgui/backends/imgui_impl_glfw.cpp
+        src/utils/converters.h
+        src/utils/draw_bresenham_line.h
+        src/views/create_line_controls.h
+        src/utils/handle_mouse_click_on_image.h
+        src/views/create_tools.h
+        src/utils/wu.h
+        src/views/editor/editor.h
+        src/models/Tool.h
+        src/models/Line.h
+        src/models/Polygon.h
+        src/models/Point.h
+        src/utils/check_point_position_relative_edge.h
+        src/utils/Is_point_inside_polygon.h
+        src/models/Color.h
 )
 
 #target_link_libraries(computer-graphics ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
