@@ -1,7 +1,7 @@
 #ifndef COMPUTER_GRAPHICS_WU_H
 #define COMPUTER_GRAPHICS_WU_H
 
-#include "../includes.h"
+#include "../../includes.h"
 
 static inline float fpart(float x) {
     return x - floorf(x);

@@ -1,7 +1,7 @@
 #ifndef ISPOINTINSIDEPOLYGON_H
 #define ISPOINTINSIDEPOLYGON_H
 
-#include "../includes.h"
+#include "../../includes.h"
 
 bool is_intersecting(Point p, Point v1, Point v2) {
     // Проверяем, пересекает ли горизонтальный луч от точки p ребро [v1, v2]

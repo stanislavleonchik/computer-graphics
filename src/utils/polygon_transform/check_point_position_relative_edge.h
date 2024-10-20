@@ -1,7 +1,7 @@
 #ifndef CHECKPOINTPOSITIONRELATIVEEDGE_H
 #define CHECKPOINTPOSITIONRELATIVEEDGE_H
 
-#include "../includes.h"
+#include "../../includes.h"
 
 bool check_point_position_relative_edge(const Line &edge, const int x, const int y ) {
     int pointX = x - edge.x0;

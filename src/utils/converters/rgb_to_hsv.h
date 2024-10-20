@@ -1,4 +1,4 @@
-#include "../includes.h"
+#include "../../includes.h"
 
 void update_texture(GLuint textureID, unsigned char* image, int width, int height, int channels) {
     glBindTexture(GL_TEXTURE_2D, textureID);

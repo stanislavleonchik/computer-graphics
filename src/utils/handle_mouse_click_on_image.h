@@ -16,6 +16,8 @@ Tool tool = Tool::standby;
 int thickness = 1;
 Color currentColor = {0, 0, 0};
 
+ImVec2 IntersectionPoint;
+
 void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, int height, float zoomLevel, ImVec2 offset) {
     if (ImGui::IsItemClicked()) {
         ImVec2 mousePos = ImGui::GetMousePos();
@@ -33,7 +35,17 @@ void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, i
                     if (!isDrawing) {
                         isDrawing = true;
                         cur_polygon = polygons.size();
-                        polygons.emplace_back(vector<Point>{{pixelX, pixelY}}, false, thickness, currentColor);
+                        polygons.emplace_back(
+                                vector<Point>{
+                                    {
+                                        static_cast<float>(pixelX),
+                                        static_cast<float>(pixelY)
+                                    }
+                                    },
+                                false,
+                                thickness,
+                                currentColor
+                                );
                     } else {
                         if (abs(pixelX - polygons[cur_polygon].v[0].x) < 10 &&
                             abs(pixelY - polygons[cur_polygon].v[0].y) < 10) {
@@ -42,6 +54,23 @@ void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, i
                             polygons[cur_polygon].v.push_back(polygons[cur_polygon].v[0]);
                         } else
                             polygons[cur_polygon].v.emplace_back(pixelX, pixelY);
+                    }
+                    break;
+                case Tool::find_intersection_point:
+                    if (!isDrawing) {
+                        startX = pixelX;
+                        startY = pixelY;
+                        isDrawing = true;
+                    }
+                    else {
+                        endX = pixelX;
+                        endY = pixelY;
+
+                        lines.emplace_back(startX, startY, endX, endY, Tool::wu, thickness);
+                        if (lines.size() >= 2)
+                            IntersectionPoint = find_intersection(lines[lines.size() - 1], lines[lines.size() - 2]);
+
+                        isDrawing = false;
                     }
                     break;
                 case Tool::point_orientation_to_edge_check: {

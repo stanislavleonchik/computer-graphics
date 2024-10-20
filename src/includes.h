@@ -37,19 +37,31 @@ using namespace std;
 #include "models/Line.h"
 #include "models/Point.h"
 #include "models/Polygon.h"
-#include "utils/converters.h"
+#include "utils/converters/converters.h"
 #include "utils/load_image.h"
-#include "utils/rgb_to_hsv.h"
+#include "utils/converters/rgb_to_hsv.h"
 #include "views/create_sliders.h"
 #include "views/create_line_controls.h"
 
-#include "utils/check_point_position_relative_edge.h"
-#include "utils/Is_point_inside_polygon.h"
-#include "utils/draw_bresenham_line.h"
+#include "utils/polygon_transform/check_point_position_relative_edge.h"
+#include "utils/polygon_transform/Is_point_inside_polygon.h"
+#include "utils/polygon_transform/edge_intersection.h"
+#include "views/message_box.h"
+#include "utils/line_draw/draw_bresenham_line.h"
+#include "utils/handle_mouse_click_on_image.h"
+#include "utils/polygon_transform/affine_transformations.h"
+#include "views/create_tools.h"
+#include "utils/line_draw/wu.h"
+#include "utils/polygon_transform/check_point_position_relative_edge.h"
+#include "utils/polygon_transform/Is_point_inside_polygon.h"
+#include "utils/line_draw/draw_bresenham_line.h"
 #include "utils/handle_mouse_click_on_image.h"
 #include "views/create_tools.h"
-#include "utils/wu.h"
-
+#include "utils/line_draw/wu.h"
+#include "views/affine_tools.h"
+#include "utils/polygon_transform/affine_transformations.h"
+#include "utils/polygon_transform/edge_intersection.h"
+#include "views/message_box.h"
 #include "views/editor/editor.h"
 
 #define watch(x) cerr << "\n" << (#x) << " is " << (x) << endl
@@ -65,5 +77,4 @@ using ull = unsigned long long;
 using ll = long long;
 using uc = unsigned char;
 
-
-#endif //COMPUTER_GRAPHICS_INCLUDES_H
+#endif

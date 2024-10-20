@@ -1,7 +1,7 @@
 #ifndef COMPUTER_GRAPHICS_DRAW_BRESENHAM_LINE_H
 #define COMPUTER_GRAPHICS_DRAW_BRESENHAM_LINE_H
 
-#include "../includes.h"
+#include "../../includes.h"
 
 void draw_bresenham_line(unsigned char* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int thickness = 1) {
     int dx = abs(x1 - x0);
