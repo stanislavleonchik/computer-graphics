@@ -1,6 +1,10 @@
 # Графиечский редактор "Lemotech"
 Проект по дисциплине CS332 Компьютерная графика
 ---
+```
+git clone https://github.com/glfw/glfw.git external/glfw
+```
+
 ### Информация для контрибьюторов
 * Именование файлов - *snake_case*
 * Именование функций - *snake_case*
