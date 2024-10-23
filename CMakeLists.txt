@@ -40,6 +40,8 @@ add_executable(computer-graphics src/main.cpp
 		src/utils/polygon_transform/check_point_position_relative_edge.h
 		src/utils/polygon_transform/Is_point_inside_polygon.h
         src/models/Color.h
+		src/views/midpoint_displacement_tools.h
+		src/utils/midpoint_displacement/draw_midpoint_displacement.h
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw)
