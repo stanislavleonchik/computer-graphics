@@ -8,13 +8,14 @@ bool isDrawing = false;
 size_t cur_polygon = 0;
 int startX = -1, startY = -1, endX = -1, endY = -1;
 vector<Line> lines;
-vector<Polygon> polygons;
 extern int leftOrRight;
 extern int isInside;
 
 Tool tool = Tool::standby;
 int thickness = 1;
 Color currentColor = {0, 0, 0};
+
+extern AffineMatrix amatrix;
 
 ImVec2 IntersectionPoint;
 

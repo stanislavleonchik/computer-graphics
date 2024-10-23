@@ -5,6 +5,8 @@
 
 using matrixf = vector<vector<float>>;
 
+vector<Polygon> polygons;
+
 class AffineMatrix {
 
 private:

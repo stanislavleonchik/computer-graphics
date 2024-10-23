@@ -31,7 +31,6 @@ int main(int argc, char** argv) {
     bool showSliders = false;
     bool showTools = false;
     bool affine_t = false;
-    bool midpointDisplacement = false;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         ImGui_ImplOpenGL3_NewFrame();
@@ -62,9 +61,6 @@ int main(int argc, char** argv) {
                 if (ImGui::MenuItem("Show Affine Tools", NULL, affine_t)) {
                     affine_t = !affine_t;
                 }
-                if (ImGui::MenuItem("Show Midpoint Displacement", NULL, midpointDisplacement)) {
-                    midpointDisplacement = !midpointDisplacement;
-                }
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
@@ -81,9 +77,6 @@ int main(int argc, char** argv) {
         }
         if (affine_t) {
             create_affine_tools();
-        }
-        if (midpointDisplacement) {
-            create_midpoint_displacement_tools();
         }
 
         ImGui::Render();
