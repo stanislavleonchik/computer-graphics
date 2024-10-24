@@ -1,21 +1,19 @@
-//
-// Created by Ly4aznik on 21.10.2024.
-//
 
-#ifndef DRAW_MIDPOINT_DISPLACEMENT_H
-#define DRAW_MIDPOINT_DISPLACEMENT_H
+#include "imgui_impl_opengl3_loader.h"
+#include "imgui_impl_opengl3.h"
+#include "GLFW/glfw3.h"
+#include "imgui_impl_glfw.h"
 
-#include "../../includes.h"
+export module draw_midpoing_displacement;
 
+import MidpointDisplacementLine;
+import <vector>;
+import <deque>;
+import <random>;
+import <cmath>;
+using std::vector, std::deque;
 
-struct Midpoint_displacement_line {
-    int x0;
-    int y0;
-    int x1;
-    int y1;
-};
-
-void draw_line(vector<GLubyte>& data, int width,int height, Midpoint_displacement_line line) {
+export void draw_line(vector<GLubyte>& data, int width, int height, MidpointDisplacementLine line) {
     int dx = abs(line.x1 - line.x0);
     int dy = abs(line.y1 - line.y0);
     int sx = (line.x0 < line.x1) ? 1 : -1;
@@ -47,11 +45,11 @@ void draw_line(vector<GLubyte>& data, int width,int height, Midpoint_displacemen
     }
 }
 
-void draw_midpoint_displacement(deque<Midpoint_displacement_line>& lines, int roughness, int width, int height, vector<GLubyte>& data, GLuint& texture) {
+export void draw_midpoint_displacement(deque<MidpointDisplacementLine>& lines, int roughness, int width, int height, vector<GLubyte>& data, GLuint& texture) {
     std::random_device rd;   // Источник случайности
     std::mt19937 gen(rd());  // Генератор на основе Mersenne Twister
     std::uniform_int_distribution<> dis(-1 * roughness, roughness);
-    if (lines.size() == 0) {
+    if (lines.empty()) {
         int x_0 = 0;
         int y_0 = rand() % height;
 
@@ -63,15 +61,15 @@ void draw_midpoint_displacement(deque<Midpoint_displacement_line>& lines, int ro
     }
     else
     {
-        int lines_count = lines.size();
+        size_t lines_count = lines.size();
         for (int i = 0; i < lines_count; i++) {
-            Midpoint_displacement_line current_line = lines.front();
+            MidpointDisplacementLine current_line = lines.front();
             lines.pop_front();
             int length = sqrt(pow(current_line.x1 - current_line.x0, 2) + pow(current_line.y1 - current_line.y0, 2));
             int rand_val = static_cast<int>(dis(gen) * length * 0.1);
-            //cout << rand_val << endl;
+            // cout << rand_val << endl;
             int h = (current_line.y1 + current_line.y0)/2 + rand_val;
-            h = max(min(h, height - 1), 1); // Округляем до допустимых значений
+            h = std::max(std::min(h, height - 1), 1); // Округляем до допустимых значений
             int mid_x = (current_line.x0 + current_line.x1) / 2;
             lines.push_back({current_line.x0, current_line.y0, mid_x, h});
             draw_line(data, width, height, lines.back());
@@ -84,5 +82,3 @@ void draw_midpoint_displacement(deque<Midpoint_displacement_line>& lines, int ro
 
 
 }
-
-#endif //DRAW_MIDPOINT_DISPLACEMENT_H

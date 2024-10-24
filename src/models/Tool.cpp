@@ -1,7 +1,7 @@
-#ifndef COMPUTER_GRAPHICS_TOOL_H
-#define COMPUTER_GRAPHICS_TOOL_H
 
-enum Tool {
+export module Tool;
+
+export enum Tool {
     standby,
     bresenham,
     wu,
@@ -17,5 +17,3 @@ enum Tool {
 
     draw_fractal,
 };
-
-#endif

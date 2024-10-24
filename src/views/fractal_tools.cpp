@@ -1,10 +1,11 @@
-#ifndef COMPUTER_GRAPHICS_CREATE_FRACTAL_TOOL_H
-#define COMPUTER_GRAPHICS_CREATE_FRACTAL_TOOL_H
 
 #include "imgui.h"
-#include "../../src/models/Color.h"
 
-void create_fractal_tool(
+export module create_fractal_tools;
+
+import Color;
+
+void fractal_tools(
         int& lines_per_frame,
         int& iterations,
         int& initial_width,
@@ -12,7 +13,7 @@ void create_fractal_tool(
         int& length_reduce,
         Color& begin_color,
         Color& end_color
-        ) {
+) {
     ImGui::Begin("Draw Fractal");
 
     ImGui::SliderInt("Lines Per Frame", &lines_per_frame, 1, 20);
@@ -42,5 +43,3 @@ void create_fractal_tool(
 
     ImGui::End();
 }
-
-#endif

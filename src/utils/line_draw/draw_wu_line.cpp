@@ -1,7 +1,7 @@
-#ifndef COMPUTER_GRAPHICS_WU_H
-#define COMPUTER_GRAPHICS_WU_H
 
-#include "../../includes.h"
+export module draw_wu_line;
+
+import <cmath>;
 
 static inline float fpart(float x) {
     return x - floorf(x);
@@ -22,7 +22,7 @@ void setPixel(uint8_t* image, int width, int height, int channels, int x, int y,
 
     for (int c = 0; c < 3; ++c) {
         uint8_t original = image[index + c];
-        uint8_t value = (uint8_t)(original * (1.0f - brightness));
+        auto value = (uint8_t)((float)original * (1.0f - brightness));
         image[index + c] = value;
     }
 
@@ -40,7 +40,7 @@ void plot_thick_pixel(uint8_t* image, int width, int height, int channels, int x
     }
 }
 
-void draw_wu_line(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int cur_thickness) {
+export void draw_wu_line(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int cur_thickness) {
     int steep = abs(y1 - y0) > abs(x1 - x0);
 
     if (steep) {
@@ -55,8 +55,8 @@ void draw_wu_line(uint8_t* image, int width, int height, int channels, int x0, i
         temp = y0; y0 = y1; y1 = temp;
     }
 
-    float dx = x1 - x0;
-    float dy = y1 - y0;
+    auto dx = (float)(x1 - x0);
+    auto dy = (float)(y1 - y0);
     float gradient = dx == 0.0f ? 1.0f : dy / dx;
 
     float xend = roundf(x0);
@@ -124,7 +124,7 @@ void setPixelAlpha(uint8_t* image, int width, int height, int channels, int x, i
     }
 }
 
-void draw_line_basic(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, uint8_t r, uint8_t g, uint8_t b) {
+export void draw_line_basic(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, uint8_t r, uint8_t g, uint8_t b) {
     int dx = abs(x1 - x0);
     int dy = -abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;
@@ -146,7 +146,7 @@ void draw_line_basic(uint8_t* image, int width, int height, int channels, int x0
     }
 }
 
-void draw_line_gupta_sproull(uint8_t* image, int width, int height, int channels,
+export void draw_line_gupta_sproull(uint8_t* image, int width, int height, int channels,
                              int x0, int y0, int x1, int y1, int thickness,
                              uint8_t r, uint8_t g, uint8_t b) {
     int dx = x1 - x0;
@@ -182,5 +182,3 @@ void draw_line_gupta_sproull(uint8_t* image, int width, int height, int channels
         draw_line_basic(image, width, height, channels, xStart, yStart, xEnd, yEnd, r, g, b);
     }
 }
-
-#endif

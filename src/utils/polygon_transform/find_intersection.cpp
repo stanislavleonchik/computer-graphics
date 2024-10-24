@@ -1,11 +1,12 @@
-#ifndef EDGE_INTERSECTION_H
-#define EDGE_INTERSECTION_H
 
-#include"../../includes.h"
+export module find_intersection;
 
-ImVec2 find_intersection(Line l1, Line l2) {
+import Line;
+#include "imgui.h"
 
-	ImVec2 a { l1.x0, l1.y0 };
+export ImVec2 find_intersection(Line l1, Line l2) {
+
+    ImVec2 a { l1.x0, l1.y0 };
     ImVec2 b { l1.x1, l1.y1 };
     ImVec2 c { l2.x0, l2.y0 };
     ImVec2 d { l2.x1, l2.y1 };
@@ -25,13 +26,11 @@ ImVec2 find_intersection(Line l1, Line l2) {
 
         float t = numerator / denominator;
         ImVec2 intersection = {
-        a.x + t * (b.x - a.x),
-        a.y + t * (b.y - a.y)
+                a.x + t * (b.x - a.x),
+                a.y + t * (b.y - a.y)
         };
         return intersection;
     }
     else
-        return ImVec2();
+        return {};
 }
-
-#endif

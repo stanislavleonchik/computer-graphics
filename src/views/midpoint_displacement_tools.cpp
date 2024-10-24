@@ -1,25 +1,29 @@
-//
-// Created by Ly4aznik on 21.10.2024.
-//
+
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <GLFW/glfw3.h>
 
 
-#ifndef MIDPOINT_DISPLACEMENT_TOOLS_H
-#define MIDPOINT_DISPLACEMENT_TOOLS_H
+export module midpoint_displacement_tools;
 
-#include "../includes.h"
+import MidpointDisplacementLine;
+import draw_midpoing_displacement;
+import <vector>;
+import <deque>;
+using std::vector, std::deque;
 
 int roughness = 1;
 
 const int canvasWidth = 1024;
 const int canvasHeight = 720;
+static bool isInitialized = false;
 
 GLuint canvasTexture;
-std::vector<GLubyte> canvasData(canvasWidth * canvasHeight * 4, 255); // RGBA
-deque<Midpoint_displacement_line> midpoint_lines;
+vector<GLubyte> canvasData(canvasWidth * canvasHeight * 4, 255); // RGBA
+deque<MidpointDisplacementLine> midpoint_lines;
 
-
-
-void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, int height) {
+export void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, int height) {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
@@ -27,13 +31,13 @@ void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, in
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-void ClearCanvas() {
-    std::fill(canvasData.begin(), canvasData.end(), 255); // Заполняем вектор 255 (Белый)
+export void ClearCanvas() {
+    fill(canvasData.begin(), canvasData.end(), 255); // Заполняем вектор 255 (Белый)
     glBindTexture(GL_TEXTURE_2D, canvasTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA, GL_UNSIGNED_BYTE, canvasData.data()); // Обновляем текстуру
 }
-static bool isInitialized = false;
-void create_midpoint_displacement_tools() {
+
+export void create_midpoint_displacement_tools() {
     ImGui::Begin("Midpoint Displacement Tools");
 
     if (!isInitialized) {
@@ -60,7 +64,4 @@ void create_midpoint_displacement_tools() {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA, GL_UNSIGNED_BYTE, canvasData.data());
 
     ImGui::End();
-
 }
-
-#endif //MIDPOINT_DISPLACEMENT_TOOLS_H

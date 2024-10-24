@@ -1,9 +1,9 @@
-#ifndef COMPUTER_GRAPHICS_CREATE_LINE_CONTROLS_H
-#define COMPUTER_GRAPHICS_CREATE_LINE_CONTROLS_H
 
-#include "../includes.h"
+#include "imgui.h"
 
-void create_line_controls(int& x0, int& y0, int& x1, int& y1, int width, int height) {
+export module create_line_controls;
+
+export void create_line_controls(int& x0, int& y0, int& x1, int& y1, int width, int height) {
     ImGui::Begin("Line Controls");
 
     ImGui::SliderInt("X0", &x0, 0, width - 1);
@@ -13,5 +13,3 @@ void create_line_controls(int& x0, int& y0, int& x1, int& y1, int width, int hei
 
     ImGui::End();
 }
-
-#endif

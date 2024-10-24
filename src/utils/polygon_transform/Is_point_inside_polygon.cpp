@@ -1,9 +1,10 @@
-#ifndef ISPOINTINSIDEPOLYGON_H
-#define ISPOINTINSIDEPOLYGON_H
 
-#include "../../includes.h"
+export module is_point_inside_polygon;
 
-bool is_intersecting(Point p, Point v1, Point v2) {
+import Point;
+import Polygon;
+
+export bool is_intersecting(Point p, Point v1, Point v2) {
     // Проверяем, пересекает ли горизонтальный луч от точки p ребро [v1, v2]
     if ((v1.y > p.y) != (v2.y > p.y)) {
         double intersectX = v1.x + (p.y - v1.y) * (v2.x - v1.x) / (v2.y - v1.y);
@@ -12,7 +13,7 @@ bool is_intersecting(Point p, Point v1, Point v2) {
     return false;
 }
 
-bool is_point_inside_polygon(Point p, const Polygon& polygon) {
+export bool is_point_inside_polygon(Point p, const Polygon& polygon) {
     int intersections = 0;
 
     for (size_t i = 0; i < polygon.v.size(); i++) {
@@ -28,5 +29,3 @@ bool is_point_inside_polygon(Point p, const Polygon& polygon) {
 
     return intersections % 2 == 1; // Нечётное число пересечений — точка внутри
 }
-
-#endif
