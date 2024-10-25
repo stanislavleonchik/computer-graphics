@@ -1,19 +1,16 @@
-
 #include "imgui_impl_opengl3_loader.h"
 #include "imgui_impl_opengl3.h"
 #include "GLFW/glfw3.h"
 #include "imgui_impl_glfw.h"
 
-export module draw_midpoing_displacement;
-
-import MidpointDisplacementLine;
-import <vector>;
-import <deque>;
-import <random>;
-import <cmath>;
+#include "../../models/MidpointDisplacementLine.h"
+#include <vector>
+#include <deque>
+#include <random>
+#include <cmath>
 using std::vector, std::deque;
 
-export void draw_line(vector<GLubyte>& data, int width, int height, MidpointDisplacementLine line) {
+void draw_line(vector<GLubyte>& data, int width, int height, MidpointDisplacementLine line) {
     int dx = abs(line.x1 - line.x0);
     int dy = abs(line.y1 - line.y0);
     int sx = (line.x0 < line.x1) ? 1 : -1;
@@ -45,7 +42,7 @@ export void draw_line(vector<GLubyte>& data, int width, int height, MidpointDisp
     }
 }
 
-export void draw_midpoint_displacement(deque<MidpointDisplacementLine>& lines, int roughness, int width, int height, vector<GLubyte>& data, GLuint& texture) {
+void draw_midpoint_displacement(deque<MidpointDisplacementLine>& lines, int roughness, int width, int height, vector<GLubyte>& data, GLuint& texture) {
     std::random_device rd;   // Источник случайности
     std::mt19937 gen(rd());  // Генератор на основе Mersenne Twister
     std::uniform_int_distribution<> dis(-1 * roughness, roughness);

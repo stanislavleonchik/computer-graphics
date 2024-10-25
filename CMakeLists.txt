@@ -17,51 +17,55 @@ include_directories(${CMAKE_SOURCE_DIR}/external/imgui/backends)
 
 add_executable(
 		computer-graphics src/main.cpp
-        external/imgui/imgui.cpp
-        external/imgui/imgui_draw.cpp
-        external/imgui/imgui_tables.cpp
-        external/imgui/imgui_widgets.cpp
-        external/imgui/backends/imgui_impl_opengl3.cpp
-        external/imgui/backends/imgui_impl_glfw.cpp
+        external/imgui/imgui.h
+		external/imgui/imgui.cpp
+		external/imgui/imgui_draw.cpp
+		external/imgui/imgui_widgets.cpp
+		external/imgui/imgui_tables.cpp
+		external/imgui/backends/imgui_impl_glfw.cpp
+		external/imgui/backends/imgui_impl_opengl3.cpp
+        external/imgui/backends/imgui_impl_opengl3.h
+        external/imgui/backends/imgui_impl_glfw.h
         external/stb/stb_image.h
         external/stb/stb_image_write.h
 
         src/includes.h
 
-		src/views/affine_tools.cpp
-		src/views/editor/editor.cpp
-		src/views/fractal_tools.cpp
-		src/views/line_controls.cpp
-		src/views/hsv_sliders.cpp
-		src/views/drawing_tools_view.cpp
-		src/views/midpoint_displacement_tools.cpp
+		src/views/affine_tools.h
+		src/views/editor/editor.h
+		src/views/fractal_tools.h
+		src/views/line_controls.h
+		src/views/hsv_sliders.h
+		src/views/drawing_tools_view.h
+		src/views/midpoint_displacement_tools.h
 
-		src/utils/converters/rgb_to_hsv_image_transform.cpp
-		src/utils/converters/apply_hsv_adjustments.cpp
-		src/utils/converters/hsv_to_rgb.cpp
-		src/utils/converters/rgb_to_hsv.cpp
-		src/utils/converters/image_to_texture.cpp
-		src/utils/converters/update_texture.cpp
+		src/utils/converters/rgb_to_hsv_image_transform.h
+		src/utils/converters/apply_hsv_adjustments.h
+		src/utils/converters/hsv_to_rgb.h
+		src/utils/converters/rgb_to_hsv.h
+		src/utils/converters/image_to_texture.h
+		src/utils/converters/update_texture.h
 
-		src/supporting_files/imgui_support.cpp
-        src/supporting_files/load_image.cpp
-		src/supporting_files/handle_mouse_click_on_image.cpp
+		src/supporting_files/imgui_support.h
+        src/supporting_files/load_image.h
+		src/supporting_files/handle_mouse_click_on_image.h
 
-		src/models/Tool.cpp
-		src/models/Line.cpp
-		src/models/Point.cpp
-		src/models/Polygon.cpp
-		src/models/Color.cpp
-		src/models/AffineMatrix.cpp
-		src/models/MidpointDisplacementLine.cpp
+		src/models/Tool.h
+		src/models/Line.h
+		src/models/Point.h
+		src/models/Polygon.h
+		src/models/Color.h
+		src/models/AffineMatrix.h
+		src/models/MidpointDisplacementLine.h
 
-		src/utils/polygon_transform/is_point_inside_polygon.cpp
-		src/utils/polygon_transform/find_intersection.cpp
-		src/utils/polygon_transform/check_point_position_relative_edge.cpp
-		src/utils/midpoint_displacement/draw_midpoing_displacement.cpp
-		src/utils/line_draw/draw_bresenham_line.cpp
-		src/utils/line_draw/fill_all.cpp
-		src/utils/line_draw/draw_wu_line.cpp
+		src/utils/polygon_transform/is_point_inside_polygon.h
+		src/utils/polygon_transform/find_intersection.h
+		src/utils/polygon_transform/check_point_position_relative_edge.h
+		src/utils/midpoint_displacement/draw_midpoing_displacement.h
+		src/utils/line_draw/draw_bresenham_line.h
+		src/utils/line_draw/fill_all.h
+		src/utils/line_draw/draw_wu_line.h
+		src/models/Tool.h
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw)

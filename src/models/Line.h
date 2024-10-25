@@ -1,10 +1,9 @@
+#pragma once
 
-export module Line;
+#include "Tool.h"
+#include "Color.h"
 
-import Tool;
-import Color;
-
-export struct Line {
+struct Line {
     float x0{};
     float y0{};
     float x1{};

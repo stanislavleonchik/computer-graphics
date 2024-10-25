@@ -1,10 +1,7 @@
-
-export module find_intersection;
-
-import Line;
+#include "../../models/Line.h"
 #include "imgui.h"
 
-export ImVec2 find_intersection(Line l1, Line l2) {
+ImVec2 find_intersection(Line l1, Line l2) {
 
     ImVec2 a { l1.x0, l1.y0 };
     ImVec2 b { l1.x1, l1.y1 };

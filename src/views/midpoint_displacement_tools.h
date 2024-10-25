@@ -1,16 +1,13 @@
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
 
 
-export module midpoint_displacement_tools;
-
-import MidpointDisplacementLine;
-import draw_midpoing_displacement;
-import <vector>;
-import <deque>;
+#include "../models/MidpointDisplacementLine.h"
+#include "../utils/midpoint_displacement/draw_midpoing_displacement.h"
+#include <vector>
+#include <deque>
 using std::vector, std::deque;
 
 int roughness = 1;
@@ -23,7 +20,7 @@ GLuint canvasTexture;
 vector<GLubyte> canvasData(canvasWidth * canvasHeight * 4, 255); // RGBA
 deque<MidpointDisplacementLine> midpoint_lines;
 
-export void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, int height) {
+void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, int height) {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
@@ -31,13 +28,13 @@ export void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int wi
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-export void ClearCanvas() {
+void ClearCanvas() {
     fill(canvasData.begin(), canvasData.end(), 255); // Заполняем вектор 255 (Белый)
     glBindTexture(GL_TEXTURE_2D, canvasTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA, GL_UNSIGNED_BYTE, canvasData.data()); // Обновляем текстуру
 }
 
-export void create_midpoint_displacement_tools() {
+void create_midpoint_displacement_tools() {
     ImGui::Begin("Midpoint Displacement Tools");
 
     if (!isInitialized) {

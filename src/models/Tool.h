@@ -1,7 +1,6 @@
+#pragma once
 
-export module Tool;
-
-export enum Tool {
+enum Tool {
     standby,
     bresenham,
     wu,

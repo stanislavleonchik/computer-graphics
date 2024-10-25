@@ -1,14 +1,11 @@
-
-export module AffineMatrix;
-
-import <vector>;
-import Polygon;
+#include <vector>
+#include "Polygon.h"
 #include "imgui.h"
 
 using std::vector;
 using matrixf = vector<vector<float>>;
 
-export class AffineMatrix {
+class AffineMatrix {
     matrixf mtr;
     unsigned int cur_poly{};
     ImVec2 point;
@@ -24,18 +21,16 @@ export class AffineMatrix {
         }
     }
 
-    auto apply(vector<vector<float>> verts, vector<Polygon>& polygons) -> void {
-        vector<vector<float>> new_verts(3);
+    void apply(vector<vector<float>> verts, vector<Polygon>& polygons) {
+        vector<vector<float>> new_verts(verts.size());
         for (size_t i = 0; i < verts.size(); i++) {
             new_verts[i].resize(3);
         }
-
-        for (size_t k = 0; k < verts.size();k++) {
+        for (size_t k = 0; k < verts.size(); k++) {
             for (size_t i = 0; i < 3; i++) {
                 new_verts[k][i] = verts[k][0] * mtr[0][i] + verts[k][1] * mtr[1][i] + verts[k][2] * mtr[2][i];
             }
         }
-
         for (size_t i = 0; i < verts.size(); i++) {
             polygons[cur_poly].v[i].x = new_verts[i][0];
             polygons[cur_poly].v[i].y = new_verts[i][1];

@@ -1,9 +1,6 @@
-
 #include "imgui.h"
 
-export module create_line_controls;
-
-export void create_line_controls(int& x0, int& y0, int& x1, int& y1, int width, int height) {
+void create_line_controls(int& x0, int& y0, int& x1, int& y1, int width, int height) {
     ImGui::Begin("Line Controls");
 
     ImGui::SliderInt("X0", &x0, 0, width - 1);

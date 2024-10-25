@@ -1,9 +1,6 @@
+#include <algorithm>
 
-export module rgb_to_hsv;
-
-import <algorithm>;
-
-export void rgb_to_hsv(float r, float g, float b, float &h, float &s, float &v) {
+void rgb_to_hsv(float r, float g, float b, float &h, float &s, float &v) {
     float max = std::max(r, std::max(g, b));
     float min = std::min(r, std::min(g, b));
     v = max;

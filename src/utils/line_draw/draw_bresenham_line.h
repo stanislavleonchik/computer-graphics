@@ -1,9 +1,6 @@
+#include <cmath>
 
-export module draw_bresenham_line;
-
-import <cmath>;
-
-export void draw_bresenham_line(unsigned char* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int thickness = 1) {
+void draw_bresenham_line(unsigned char* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int thickness = 1) {
     int dx = std::abs(x1 - x0);
     int dy = std::abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;

@@ -1,12 +1,10 @@
+#pragma once
 
-export module Polygon;
-
-import Point;
-import Color;
-import <vector>;
+#include "Point.h"
+#include "Color.h"
 using std::vector;
 
-export struct Polygon {
+struct Polygon {
     vector<Point> v = {};
     bool completed = false;
     int thickness = 3;

@@ -1,16 +1,13 @@
-
 #include "imgui.h"
 #include "GLFW/glfw3.h"
-
-export module drawing_tools_view;
-
-import Tool;
-import Color;
-import Polygon;
+#include "../models/Color.h"
+#include "../models/Polygon.h"
+#include "../models/Tool.h"
+#include <vector>
 
 using std::vector;
 
-export auto create_drawing_tools_view(
+auto create_drawing_tools_view(
         Tool& cur_tool,
         int& cur_thickness,
         bool& is_drawing,
@@ -29,6 +26,13 @@ export auto create_drawing_tools_view(
     if (ImGui::Button("Spectate")) {
         is_drawing = false;
         cur_tool = Tool::standby;
+    }
+    if (is_drawing && cur_tool == Tool::polygon) {
+        is_drawing = false;
+        if (!polygons.empty()) {
+            polygons.back().completed = true;
+            polygons.back().v.push_back(polygons.back().v[0]);
+        }
     }
 
     // Палитра
@@ -52,6 +56,7 @@ export auto create_drawing_tools_view(
         is_drawing = false;
         cur_tool = Tool::point_orientation_to_edge_check;
     }
+
     if (cur_tool == Tool::point_orientation_to_edge_check) {
         ImGui::BeginDisabled();
         ImGui::RadioButton("Left", &left_or_right, 0); // Если selected == 0, будет выбрана эта кнопка
@@ -73,6 +78,7 @@ export auto create_drawing_tools_view(
         is_drawing = false;
         if (!polygons.empty()) {
             polygons[polygons.size() - 1].completed = true;
+            polygons[polygons.size() - 1].v.push_back(polygons[polygons.size() - 1].v[0]);
         }
         cur_tool = Tool::polygon;
     }

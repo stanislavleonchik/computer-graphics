@@ -1,27 +1,24 @@
-
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
 #include <vector>
 
-export module editor;
+#include "../../models/Tool.h"
+#include "../../models/Line.h"
+#include "../../models/Polygon.h"
+#include "../../models/Color.h"
 
-import Tool;
-import Line;
-import Polygon;
-import Color;
+#include "../../utils/converters/apply_hsv_adjustments.h"
+#include "../../utils/converters/update_texture.h"
+#include "../../supporting_files/handle_mouse_click_on_image.h"
 
-import apply_hsv_adjustments;
-import update_texture;
-import handle_mouse_click_on_image;
-
-import draw_bresenham_line;
-import draw_wu_line;
-import fill_all;
+#include "../../utils/line_draw/draw_bresenham_line.h"
+#include "../../utils/line_draw/draw_wu_line.h"
+#include "../../utils/line_draw/fill_all.h"
 
 using std::vector;
 
 
-export auto create_editor(
+auto create_editor(
         const int DISPLAY_WIDTH,
         const int DISPLAY_HEIGHT,
 

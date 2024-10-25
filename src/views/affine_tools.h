@@ -1,16 +1,8 @@
-
-module affine_tools;
-
-import AffineMatrix;
-import Polygon;
-import Tool;
+#include "../models/AffineMatrix.h"
+#include "../models/Polygon.h"
+#include "../models/Tool.h"
 
 using std::vector, std::string;
-
-void offset_window();
-void popup(const string& opt_name);
-void turning_window();
-void scaling_window();
 
 bool show_offset_window = false; // Флаг для показа окна смещения
 bool show_turning_window = false; // Флаг для показа окна углового смещения
@@ -28,44 +20,6 @@ string turning_opt = "Turning Options";
 
 AffineMatrix amatrix;
 ImVec2 center_point;
-
-export void create_affine_tools() {
-    ImGui::Begin("Affine tools");
-
-    if (ImGui::Button("offset")) {
-        show_offset_window = true;
-    }
-    if (ImGui::Button("Turning")) {
-        ImGui::OpenPopup(turning_opt.c_str()); // Открываем всплывающее окно с опциями
-
-    }
-
-    if (ImGui::Button("Scaling")) {
-        ImGui::OpenPopup(scaling_opt.c_str());
-    }
-
-    popup(scaling_opt);
-    popup(turning_opt);
-
-    if (ImGui::IsItemClicked()) {
-        ImVec2 mousePos = ImGui::GetMousePos();
-        amatrix.set_center_point(mousePos);
-    }
-
-    ImGui::End();
-
-
-    if (show_offset_window) {
-        offset_window();
-    }
-
-    if (show_turning_window) {
-        turning_window();
-    }
-
-    if (show_scaling_window)
-        scaling_window();
-}
 
 void popup(const string& opt_name, Tool& current_tool) {
     if (ImGui::BeginPopup(opt_name.c_str())) { // Начинаем создание выпадающего списка
@@ -160,4 +114,42 @@ void scaling_window(vector<Polygon>& polygons) {
     }
 
     ImGui::End();
+}
+
+void create_affine_tools(vector<Polygon>& polygons, Tool& current_tool) {
+    ImGui::Begin("Affine tools");
+
+    if (ImGui::Button("offset")) {
+        show_offset_window = true;
+    }
+    if (ImGui::Button("Turning")) {
+        ImGui::OpenPopup(turning_opt.c_str()); // Открываем всплывающее окно с опциями
+
+    }
+
+    if (ImGui::Button("Scaling")) {
+        ImGui::OpenPopup(scaling_opt.c_str());
+    }
+
+    popup(scaling_opt, current_tool);
+    popup(turning_opt, current_tool);
+
+    if (ImGui::IsItemClicked()) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+        amatrix.set_center_point(mousePos);
+    }
+
+    ImGui::End();
+
+
+    if (show_offset_window) {
+        offset_window(polygons);
+    }
+
+    if (show_turning_window) {
+        turning_window(polygons);
+    }
+
+    if (show_scaling_window)
+        scaling_window(polygons);
 }

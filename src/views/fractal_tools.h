@@ -1,10 +1,5 @@
-
 #include "imgui.h"
-
-export module create_fractal_tools;
-
-import Color;
-
+#include "../models/Color.h"
 void fractal_tools(
         int& lines_per_frame,
         int& iterations,

@@ -1,24 +1,21 @@
-
 #include <iostream>
 
-export module handle_mouse_click_on_image;
+#include "../models/Point.h"
+#include "../models/Line.h"
+#include "../models/Tool.h"
+#include "../models/Color.h"
+#include "../models/Polygon.h"
 
-import Point;
-import Line;
-import Tool;
-import Color;
-import Polygon;
-
-import check_point_position_relative_edge;
-import find_intersection;
-import is_point_inside_polygon;
+#include "../utils/polygon_transform/check_point_position_relative_edge.h"
+#include "../utils/polygon_transform/find_intersection.h"
+#include "../utils/polygon_transform/is_point_inside_polygon.h"
 
 #include "imgui.h"
 
 
 using std::vector;
 
-export auto handle_mouse_click_on_image(
+auto handle_mouse_click_on_image(
         ImVec2 image_pos,
         ImVec2 image_size,
         int IMAGE_EDITOR_WIDTH,

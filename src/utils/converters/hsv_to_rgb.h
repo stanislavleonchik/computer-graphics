@@ -1,7 +1,4 @@
-
-export module hsv_to_rgb;
-
-export void hsv_to_rgb(float h, float s, float v, float &r, float &g, float &b) {
+void hsv_to_rgb(float h, float s, float v, float &r, float &g, float &b) {
     if (s <= 0.0f) {
         r = g = b = v;
         return;

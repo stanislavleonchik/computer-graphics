@@ -1,61 +1,90 @@
-
-
 #include "imgui_impl_opengl3_loader.h"
 #include "imgui_impl_opengl3.h"
 #include "GLFW/glfw3.h"
 #include "imgui_impl_glfw.h"
 
-import imgui_support;
+#include "supporting_files/imgui_support.h"
 
-import rgb_to_hsv_image;
-import image_to_texture;
-import load_image;
+#include "utils/converters/rgb_to_hsv_image_transform.h"
+#include "utils/converters/image_to_texture.h"
+#include "supporting_files/load_image.h"
 
-import hsv_sliders;
-import editor;
-import drawing_tools_view;
-import affine_tools;
+#include "views/hsv_sliders.h"
+#include "views/editor/editor.h"
+#include "views/drawing_tools_view.h"
+#include "views/affine_tools.h"
 
-import Line;
-import Tool;
-import Color;
-import Polygon;
-import AffineMatrix;
-
-
+#include "models/Line.h"
+#include "models/Tool.h"
+#include "models/Color.h"
+#include "models/Polygon.h"
 
 using std::vector;
 using matrixf = vector<vector<float>>;
 
-void setup_imgui(GLFWwindow *pWwindow) {
+void setup_imgui(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-
+    ImGuiIO &io = ImGui::GetIO();
+    (void) io;
     ImGui::StyleColorsDark();
-
-    ImGui_ImplGlfw_InitForOpenGL(pWwindow, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 150");
 }
 
 int main() {
     const int DISPLAY_WIDTH = 1280;
     const int DISPLAY_HEIGHT = 720;
-
-    unsigned char* EDITOR_IMAGE;
     int IMAGE_EDITOR_WIDTH;
     int IMAGE_EDITOR_HEIGHT;
     int IMAGE_EDITOR_CHANNELS;
+    unsigned char* EDITOR_IMAGE;
+    EDITOR_IMAGE = load_image(
+            "../assets/blank.png",
+            &IMAGE_EDITOR_WIDTH,
+            &IMAGE_EDITOR_HEIGHT,
+            &IMAGE_EDITOR_CHANNELS
+    );
 
     float hue_adjust;
     float saturation_adjust;
     float brightness_adjust;
-
     int left_or_right = 2;
     int is_inside = 0;
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW\n";
+        return -1;
+    }
 
-    vector<Line> lines;
-    vector<Polygon> polygons;
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // OpenGL major version
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2); // OpenGL minor version
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // Core profile
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Required on macOS
+
+    GLFWwindow* window = glfwCreateWindow(DISPLAY_WIDTH, DISPLAY_HEIGHT, "Lemotech", NULL, NULL);
+    if (!window) {
+        glfwTerminate();
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    if (imgl3wInit() != GL3W_OK) { // Use the correct function here
+        std::cerr << "Failed to initialize OpenGL loader." << std::endl;
+        return -1;
+    }
+
+    // Check OpenGL version
+    const GLubyte* version = glGetString(GL_VERSION);
+    if (version) {
+        std::cout << "OpenGL Version: " << version << std::endl;
+    } else {
+        std::cerr << "Failed to retrieve OpenGL version." << std::endl;
+    }
+
+    vector<Line> lines = {};
+    vector<Polygon> polygons = {};
     size_t current_polygon = 0;
     ImVec2 intersection_point;
 
@@ -68,11 +97,6 @@ int main() {
 
     AffineMatrix amatrix;
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    GLFWwindow* window = glfwCreateWindow(DISPLAY_WIDTH, DISPLAY_HEIGHT, "Lemotech", NULL, NULL);
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
     setup_imgui(window);
@@ -189,7 +213,7 @@ int main() {
             );
         }
         if (is_affine_tools_shown) {
-            create_affine_tools();
+            create_affine_tools(polygons, current_tool);
         }
 
         ImGui::Render();

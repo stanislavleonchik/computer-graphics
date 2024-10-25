@@ -1,7 +1,4 @@
-
-export module draw_wu_line;
-
-import <cmath>;
+#include <cmath>
 
 static inline float fpart(float x) {
     return x - floorf(x);
@@ -40,7 +37,7 @@ void plot_thick_pixel(uint8_t* image, int width, int height, int channels, int x
     }
 }
 
-export void draw_wu_line(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int cur_thickness) {
+void draw_wu_line(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int cur_thickness) {
     int steep = abs(y1 - y0) > abs(x1 - x0);
 
     if (steep) {
@@ -124,7 +121,7 @@ void setPixelAlpha(uint8_t* image, int width, int height, int channels, int x, i
     }
 }
 
-export void draw_line_basic(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, uint8_t r, uint8_t g, uint8_t b) {
+void draw_line_basic(uint8_t* image, int width, int height, int channels, int x0, int y0, int x1, int y1, uint8_t r, uint8_t g, uint8_t b) {
     int dx = abs(x1 - x0);
     int dy = -abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;
@@ -146,7 +143,7 @@ export void draw_line_basic(uint8_t* image, int width, int height, int channels,
     }
 }
 
-export void draw_line_gupta_sproull(uint8_t* image, int width, int height, int channels,
+void draw_line_gupta_sproull(uint8_t* image, int width, int height, int channels,
                              int x0, int y0, int x1, int y1, int thickness,
                              uint8_t r, uint8_t g, uint8_t b) {
     int dx = x1 - x0;

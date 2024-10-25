@@ -1,12 +1,9 @@
-
-export module rgb_to_hsv_image;
-
-import <vector>;
-import rgb_to_hsv;
+#include <vector>
+#include "rgb_to_hsv.h"
 
 using std::vector;
 
-export vector<float> rgv_to_hsv_image_transform(
+vector<float> rgv_to_hsv_image_transform(
         const unsigned char* image,
         const int width,
         const int height,

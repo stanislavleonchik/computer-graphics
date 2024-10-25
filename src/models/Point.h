@@ -1,9 +1,8 @@
+#pragma once
 
 #include "imgui.h"
 
-export module Point;
-
-export struct Point {
+struct Point {
     float x, y;
 
     Point(float x, float y) {

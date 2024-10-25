@@ -1,13 +1,10 @@
-
-export module apply_hsv_adjustments;
-
-import <vector>;
-import <iomanip>;
-import hsv_to_rgb;
+#include <vector>
+#include <iomanip>
+#include "hsv_to_rgb.h"
 
 using std::vector, std::clamp;
 
-export void apply_hsv_adjustments(
+void apply_hsv_adjustments(
         unsigned char* image,
         vector<float>& hsvImage,
         int width,
