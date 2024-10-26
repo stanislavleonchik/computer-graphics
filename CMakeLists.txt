@@ -40,6 +40,10 @@ add_executable(computer-graphics src/main.cpp
 		src/utils/polygon_transform/check_point_position_relative_edge.h
 		src/utils/polygon_transform/Is_point_inside_polygon.h
         src/models/Color.h
+	src/views/affine_tools.h
+	src/utils/polygon_transform/affine_transformations.h
+	src/utils/polygon_transform/edge_intersection.h
+	src/utils/line_draw/BezierCurve.h
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw)

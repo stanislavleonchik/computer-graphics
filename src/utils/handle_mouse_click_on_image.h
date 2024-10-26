@@ -8,14 +8,16 @@ bool isDrawing = false;
 size_t cur_polygon = 0;
 int startX = -1, startY = -1, endX = -1, endY = -1;
 vector<Line> lines;
-vector<Polygon> polygons;
 extern int leftOrRight;
 extern int isInside;
+BezierCurve curve = BezierCurve();
 
 Tool tool = Tool::standby;
 int thickness = 1;
 Color currentColor = {0, 0, 0};
 
+extern AffineMatrix amatrix;
+extern bool is_setpoint;
 ImVec2 IntersectionPoint;
 
 void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, int height, float zoomLevel, ImVec2 offset) {
@@ -85,6 +87,29 @@ void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, i
                     }
                     break;
                 }
+                case Tool::affine: {
+                    amatrix.set_center_point(ImVec2(pixelX, pixelY));
+                    is_setpoint = true;
+                    break;
+                }
+                case Tool::B_curve:{
+              
+                    if (!isDrawing) {
+                        curve.drag_point(ImVec2(pixelX, pixelY));
+                        isDrawing = true;
+                        break;
+                    }
+
+                    if (!curve.choosen_point(ImVec2(pixelX, pixelY)) && isDrawing) {
+                        curve.append_point(ImVec2(pixelX, pixelY));
+                    }
+                    else {
+                        isDrawing = false;
+                    }
+
+
+                    break;
+                }
                 default:
                     if (!isDrawing) {
                         startX = pixelX;
@@ -100,7 +125,29 @@ void handle_mouse_click_on_image(ImVec2 imagePos, ImVec2 imageSize, int width, i
                     }
             }
         }
-    }
+	}
+	if (ImGui::IsItemClicked(1)) {
+		ImVec2 mousePos = ImGui::GetMousePos();
+		ImVec2 adjustedImagePos = ImVec2(imagePos.x + offset.x, imagePos.y + offset.y);
+		float relativeX = (mousePos.x - adjustedImagePos.x) / imageSize.x;
+		float relativeY = (mousePos.y - adjustedImagePos.y) / imageSize.y;
+
+		if (relativeX >= 0.0f && relativeX <= 1.0f && relativeY >= 0.0f && relativeY <= 1.0f) {
+			int pixelX = static_cast<int>(relativeX * width);
+			int pixelY = static_cast<int>(relativeY * height);
+			switch (tool) {
+			case Tool::B_curve: {
+                if (curve.choosen_point((ImVec2(pixelX, pixelY)))) {
+                    curve.delete_point(ImVec2(pixelX, pixelY));
+                    isDrawing = true;
+                }
+                break;
+			}
+            default:
+                break;
+			}
+		}
+	}
 }
 
 #endif

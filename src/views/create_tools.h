@@ -75,6 +75,12 @@ void create_tools(Tool& cur_tool, int& cur_thickness) {
         string res = "Intersection point: (" + to_string((int)round(IntersectionPoint.x)) + ", " + to_string((int)round(IntersectionPoint.y)) + ')';
         ShowInfoWindow(res);
     }
+    if (ImGui::Button("Bezier Curve")) {
+        if (cur_tool == Tool::B_curve)
+            curve.clear();
+        isDrawing = true;
+        cur_tool = Tool::B_curve;
+    }
     ImGui::SliderInt("Thickness", &cur_thickness, 1, 8);
 
     if (ImGui::Button("Fill")) {
