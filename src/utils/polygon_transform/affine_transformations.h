@@ -5,6 +5,8 @@
 
 using matrixf = vector<vector<float>>;
 
+vector<Polygon> polygons;
+
 class AffineMatrix {
 
 private:
@@ -27,7 +29,7 @@ private:
 
 	void apply(vector<vector<float>> verts) {
 
-		vector<vector<float>> new_verts(3);
+		vector<vector<float>> new_verts(verts.size());
 		for (size_t i = 0; i < verts.size(); i++)
 		{
 			new_verts[i].resize(3);
@@ -70,6 +72,8 @@ public:
 	bool around_center;
 
 	AffineMatrix() {
+		around_center = true;
+		cur_poly = 0;
 		mtr.resize(3);
 		for (size_t i = 0; i < 3; i++)
 		{
@@ -97,7 +101,6 @@ public:
 		apply(verts);
 
 		reset_mtr();
-
 	}
 	
 
@@ -136,11 +139,11 @@ public:
 		offset[2][0] = -center.x;
 		offset[2][1] = -center.y;
 
-		turning_val = turning_val * 3.14159 / 180;
-		mtr[0][0] = cos(turning_val);
-		mtr[0][1] = sin(turning_val);
-		mtr[1][0] = -sin(turning_val);
-		mtr[1][1] = cos(turning_val);
+		float radians = turning_val * 3.1415926 / 180;
+		mtr[0][0] = cos(radians);
+		mtr[0][1] = sin(radians);
+		mtr[1][0] = -sin(radians);
+		mtr[1][1] = cos(radians);
 
 		mtr = prod(offset, mtr);
 

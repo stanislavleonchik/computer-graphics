@@ -43,11 +43,6 @@ void create_affine_tools() {
 
     popup(scaling_opt);
     popup(turning_opt);
-    
-    if (ImGui::IsItemClicked()) {
-        ImVec2 mousePos = ImGui::GetMousePos();
-        amatrix.set_center_point(mousePos);
-    }
 
     ImGui::End();
 
