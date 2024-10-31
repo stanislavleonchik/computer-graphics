@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 26)
 
 find_package(OpenGL REQUIRED)
 
+add_library(glad external/glad/src/glad.c)
+include_directories(glad external/glad/include)
+
 add_subdirectory(external/glfw)
 include_directories(external/glfw/include)
 
@@ -31,9 +34,8 @@ add_executable(
 		src/views/editor/editor.h
 		src/views/fractal_view/fractal_tools.h
 		src/views/line_controls.h
-		src/views/hsv_sliders.h
 		src/views/drawing_tools_view.h
-	src/utils/line_draw/BezierCurve.h
+		src/utils/line_draw/BezierCurve.h
 		src/views/midpoint_displacement_tools.h
 
 		src/utils/converters/update_texture.h
@@ -63,6 +65,12 @@ add_executable(
 		src/models/Fractal/LSystem.h
 		src/views/fractal_view/fractal_editor.h
 		src/models/Fractal/TurtleState.h
+		src/models/3D/Point3.h
+		src/models/3D/TextureCoord.h
+		src/models/3D/Polygon3.h
+		src/models/3D/Mesh.h
+		src/models/3D/VertexNormal.h
+		src/views/editor3d/Editor3DView.h
 )
 
-target_link_libraries(computer-graphics OpenGL::GL glfw)
+target_link_libraries(computer-graphics OpenGL::GL glfw glad)
