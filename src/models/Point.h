@@ -11,6 +11,16 @@ struct Point {
         this->y = y;
     }
 
+    Point() {
+        x = 0;
+        y = 0;
+    }
+
+    Point(ImVec2 p) {
+        x = p.x;
+        y = p.y;
+    }
+
     Point operator-(const Point& p) {
         return Point{x-p.x, y-p.y};
     }

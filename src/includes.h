@@ -58,14 +58,15 @@ using namespace std;
 #include "utils/polygon_transform/check_point_position_relative_edge.h"
 #include "utils/polygon_transform/Is_point_inside_polygon.h"
 #include "utils/line_draw/draw_bresenham_line.h"
+#include "utils/polygon_transform/affine_transformations.h"
 #include "utils/handle_mouse_click_on_image.h"
 #include "views/create_tools.h"
 #include "utils/line_draw/wu.h"
-#include "views/affine_tools.h"
-#include "utils/polygon_transform/affine_transformations.h"
 #include "utils/polygon_transform/edge_intersection.h"
 #include "views/message_box.h"
 #include "views/editor/editor.h"
+#include "views/affine_tools.h"
+#include "utils/line_draw/BezierCurve.h"
 
 #define watch(x) cerr << "\n" << (#x) << " is " << (x) << endl
 #define print(x) cerr << endl; for (auto a: x) cerr << (a) << " "; cerr << endl

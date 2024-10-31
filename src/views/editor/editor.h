@@ -130,6 +130,9 @@ void create_editor(GLuint textureID) {
         }
     }
 
+    curve.draw_points();
+    curve.draw_curves(menuHeight);
+
     update_texture(textureID, image, width, height, channels);
 
     ImGui::End();
