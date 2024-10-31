@@ -44,6 +44,8 @@ add_executable(computer-graphics src/main.cpp
 	src/utils/polygon_transform/affine_transformations.h
 	src/utils/polygon_transform/edge_intersection.h
 	src/utils/line_draw/BezierCurve.h
+		src/views/midpoint_displacement_tools.h
+		src/utils/midpoint_displacement/draw_midpoint_displacement.h
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw)

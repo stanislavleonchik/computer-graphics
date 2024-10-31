@@ -42,12 +42,16 @@ using namespace std;
 #include "utils/converters/rgb_to_hsv.h"
 #include "views/create_sliders.h"
 #include "views/create_line_controls.h"
+#include "utils/midpoint_displacement/draw_midpoint_displacement.h"
+#include "views/midpoint_displacement_tools.h"
+
 
 #include "utils/polygon_transform/check_point_position_relative_edge.h"
 #include "utils/polygon_transform/Is_point_inside_polygon.h"
 #include "utils/polygon_transform/edge_intersection.h"
 #include "views/message_box.h"
 #include "utils/line_draw/draw_bresenham_line.h"
+#include "utils/polygon_transform/affine_transformations.h"
 #include "utils/handle_mouse_click_on_image.h"
 #include "views/create_tools.h"
 #include "utils/line_draw/wu.h"
