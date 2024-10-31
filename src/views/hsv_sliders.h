@@ -1,9 +1,6 @@
-#ifndef COMPUTER_GRAPHICS_CREATE_SLIDERS_H
-#define COMPUTER_GRAPHICS_CREATE_SLIDERS_H
-
 #include "imgui.h"
 
-void create_sliders(float& hue, float& saturation, float& brightness) {
+void create_hsv_sliders(float& hue, float& saturation, float& brightness) {
     ImGui::Begin("HSV Controls");
 
     ImGui::SliderFloat("Hue", &hue, 0.0f, 360.0f);
@@ -12,5 +9,3 @@ void create_sliders(float& hue, float& saturation, float& brightness) {
 
     ImGui::End();
 }
-
-#endif
