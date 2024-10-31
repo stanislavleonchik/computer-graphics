@@ -1,11 +1,8 @@
-#ifndef COMPUTER_GRAPHICS_DRAW_BRESENHAM_LINE_H
-#define COMPUTER_GRAPHICS_DRAW_BRESENHAM_LINE_H
-
-#include "../../includes.h"
+#include <cmath>
 
 void draw_bresenham_line(unsigned char* image, int width, int height, int channels, int x0, int y0, int x1, int y1, int thickness = 1) {
-    int dx = abs(x1 - x0);
-    int dy = abs(y1 - y0);
+    int dx = std::abs(x1 - x0);
+    int dy = std::abs(y1 - y0);
     int sx = (x0 < x1) ? 1 : -1;
     int sy = (y0 < y1) ? 1 : -1;
     int err = dx - dy;
@@ -39,19 +36,3 @@ void draw_bresenham_line(unsigned char* image, int width, int height, int channe
         }
     }
 }
-
-void fill_all(unsigned char* image, int width, int height, int channels, Color color = {30, 31, 33}) {
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            int index = (y * width + x) * channels;  // Индекс пикселя в массиве изображения
-            image[index] = color.r;      // Красный канал
-            image[index + 1] = color.g;  // Зеленый канал
-            image[index + 2] = color.b;  // Синий канал
-            if (channels == 4) {
-                image[index + 3] = 255;  // Альфа-канал, если он есть
-            }
-        }
-    }
-}
-
-#endif

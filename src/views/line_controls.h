@@ -1,7 +1,4 @@
-#ifndef COMPUTER_GRAPHICS_CREATE_LINE_CONTROLS_H
-#define COMPUTER_GRAPHICS_CREATE_LINE_CONTROLS_H
-
-#include "../includes.h"
+#include "imgui.h"
 
 void create_line_controls(int& x0, int& y0, int& x1, int& y1, int width, int height) {
     ImGui::Begin("Line Controls");
@@ -13,5 +10,3 @@ void create_line_controls(int& x0, int& y0, int& x1, int& y1, int width, int hei
 
     ImGui::End();
 }
-
-#endif

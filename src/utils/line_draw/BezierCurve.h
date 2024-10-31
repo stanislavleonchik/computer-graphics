@@ -1,12 +1,13 @@
-#ifndef BEZIERCURVE_H
-#define BEZIERCURVE_H
+#pragma once
 
-#include"../src/includes.h"
+#include <array>
+#include <vector>
+#include "imgui.h"
 
 class BezierCurve {
 private:
-	vector<ImVec2> points; //опорные точки
-	vector<array<ImVec2, 4>> curves;
+	std::vector<ImVec2> points; //пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+	std::vector<std::array<ImVec2, 4>> curves;
 	int focused_point;
 	bool dragging;
 	int n;
@@ -33,7 +34,7 @@ private:
 		return conversation(i) * pow(t, i) * pow(1 - t, n - i);
 	}
 
-	//версия для кривой старшей степени
+	//пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	ImVec2 eval_curve_point(double t) {
 		ImVec2 B(0, 0);
 		
@@ -46,7 +47,7 @@ private:
 		return B;
 	}
 
-	//функция собирает массив кривых по заданным пользователем точкам
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 	void points_correct() {
 
 		curves.clear();
@@ -65,16 +66,16 @@ private:
 			curves.push_back({ term_point_prev, points[i], points[i + 1], term_point_next });
 			term_point_prev = term_point_next;
 		}
-		i -= 1; // индекс последней прочитанной
+		i -= 1; // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
 		int count_not_readed_point = points.size() - i - 1;
 
-		if (count_not_readed_point == 2) { //остались две точки
+		if (count_not_readed_point == 2) { //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
 			i += 1;
 			ImVec2 term_point((points[i].x + points[i + 1].x) / 2, (points[i].y + points[i + 1].y) / 2);
 			curves.push_back({ term_point_prev, points[i], term_point, points[i + 1] });
 		}
-		else if (count_not_readed_point == 1) { //ситуация возможна только если points.size() == 2
+		else if (count_not_readed_point == 1) { //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ points.size() == 2
 			//ImVec2 term_point1((points[i].x + points[i + 1].x) / 3, (points[i].y + points[i + 1].y) / 3);
 			//ImVec2 term_point2(2 * (points[i].x + points[i + 1].x) / 3, 2 * (points[i].y + points[i + 1].y) / 3);
 			ImVec2 term_point1(
@@ -85,10 +86,10 @@ private:
 				points[i].x + 2 * (points[i + 1].x - points[i].x) / 3,
 				points[i].y + 2 * (points[i + 1].y - points[i].y) / 3
 			);
-			curves.push_back({ points[i], term_point1, term_point2, points[i + 1] }); //должна получится прямая линия
+			curves.push_back({ points[i], term_point1, term_point2, points[i + 1] }); //пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
 		}
 		else if (count_not_readed_point == 3) {
-			if (points.size() == 3) { //на самом деле как будто это должно попадать цикл
+			if (points.size() == 3) { //пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
 				ImVec2 term_point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2);
 				curves.push_back({ points[0], points[1], term_point, points[2] });
 			}
@@ -110,10 +111,10 @@ public:
 		point_radius = 8;
 		common_color = ImColor(0, 0, 255);
 		focused_color = ImColor(255, 0, 0);
-		menu_h = 23; //оно потом переопределяется если что
+		menu_h = 23; //пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
 	}
 
-	//версия для кривой старшей степени
+	//пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	void draw_curve(float menu_h) {
 		this->menu_h = menu_h;
 		if (points.size() < 2)
@@ -129,7 +130,7 @@ public:
 		}
 	}
 
-	//кубическая составная
+	//пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	void draw_curves(float menu_h) {
 		this->menu_h = menu_h;
 		if (points.size() == 1)
@@ -173,7 +174,7 @@ public:
 		n = 0;
 	}
 
-	//для отладки
+	//пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	void draw_all_points() {
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
 		for (auto curve: curves)
@@ -189,7 +190,7 @@ public:
 		p.y += menu_h + point_radius;
 		p.x += point_radius;
 		points.push_back(p);
-		n = points.size() - 1;//для кривой старшей степени
+		n = points.size() - 1;//пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 		
 		points_correct();
 	}
@@ -211,7 +212,7 @@ public:
 	void delete_point(ImVec2 p) {
 		points.erase(points.begin() + focused_point);
 		focused_point = -1;
-		n = points.size()-1;//для кривой старшей степени
+		n = points.size()-1;//пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 		points_correct();
 	}
 
@@ -223,5 +224,3 @@ public:
 		points_correct();
 	}
 };
-
-#endif // !BEZIERCURVE_H

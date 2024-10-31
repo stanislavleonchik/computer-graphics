@@ -1,7 +1,6 @@
-#ifndef COMPUTER_GRAPHICS_POINT_H
-#define COMPUTER_GRAPHICS_POINT_H
+#pragma once
 
-#include"../includes.h"
+#include "imgui.h"
 
 struct Point {
     float x, y;
@@ -25,30 +24,23 @@ struct Point {
         return Point{x-p.x, y-p.y};
     }
 
-    Point operator+(const Point& p) {
+    Point operator+(const Point& p) const {
         return Point{ x + p.x, y + p.y };
     }
 
-    Point operator*(const Point& p) {
+    Point operator*(const Point& p) const {
         return Point{ x * p.x, y * p.y };
     }
 
-    Point operator/(const Point& p) {
+    Point operator/(const Point& p) const {
         return Point{ x / p.x, y / p.y };
     }
 
-    Point& operator = (const Point& p)
-    {
-        x = p.x;
-        y = p.y;
-        return *this;
-    }
-    Point& operator = (const ImVec2& p)
-    {
+    Point& operator=(const Point& p) = default;
+
+    Point& operator=(const ImVec2& p) {
         x = p.x;
         y = p.y;
         return *this;
     }
 };
-
-#endif
