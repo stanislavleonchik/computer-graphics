@@ -2,6 +2,7 @@
 #define COMPUTER_GRAPHICS_HANDLE_MOUSE_CLICK_ON_IMAGE_H
 
 #include "../includes.h"
+#include "../utils/line_draw/BezierCurve.h"
 using namespace std;
 
 bool isDrawing = false;
