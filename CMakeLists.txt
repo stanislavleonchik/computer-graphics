@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.28)
 project(computer-graphics)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 26)
+
 
 find_package(OpenGL REQUIRED)
 
@@ -29,32 +28,23 @@ add_executable(
         external/stb/stb_image.h
         external/stb/stb_image_write.h
 
-        src/includes.h
-
 		src/views/affine_tools.h
 		src/views/editor/editor.h
-		src/views/fractal_tools.h
+		src/views/fractal_view/fractal_tools.h
 		src/views/line_controls.h
 		src/views/hsv_sliders.h
 		src/views/drawing_tools_view.h
 		src/views/midpoint_displacement_tools.h
 
-		src/utils/converters/rgb_to_hsv_image_transform.h
-		src/utils/converters/apply_hsv_adjustments.h
-		src/utils/converters/hsv_to_rgb.h
-		src/utils/converters/rgb_to_hsv.h
-		src/utils/converters/image_to_texture.h
 		src/utils/converters/update_texture.h
 
 		src/supporting_files/imgui_support.h
-        src/supporting_files/load_image.h
 		src/supporting_files/handle_mouse_click_on_image.h
 
 		src/models/Tool.h
 		src/models/Line.h
 		src/models/Point.h
 		src/models/Polygon.h
-		src/models/Color.h
 		src/models/AffineMatrix.h
 		src/models/MidpointDisplacementLine.h
 
@@ -63,9 +53,16 @@ add_executable(
 		src/utils/polygon_transform/check_point_position_relative_edge.h
 		src/utils/midpoint_displacement/draw_midpoing_displacement.h
 		src/utils/line_draw/draw_bresenham_line.h
-		src/utils/line_draw/fill_all.h
 		src/utils/line_draw/draw_wu_line.h
 		src/models/Tool.h
+		src/models/Fractal/FractalParams.h
+		src/models/Fractal/Fractal.h
+		src/models/Fractal/Fractal.h
+		src/models/Fractal/FractalVertex.h
+		src/utils/fractals/fractal_utils.h
+		src/models/Fractal/LSystem.h
+		src/views/fractal_view/fractal_editor.h
+		src/models/Fractal/TurtleState.h
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw)

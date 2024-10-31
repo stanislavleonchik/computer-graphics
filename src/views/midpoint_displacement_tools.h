@@ -17,7 +17,7 @@ const int canvasHeight = 720;
 static bool isInitialized = false;
 
 GLuint canvasTexture;
-vector<GLubyte> canvasData(canvasWidth * canvasHeight * 4, 255); // RGBA
+vector<GLubyte> canvasData(canvasWidth * canvasHeight * 4, 255);
 deque<MidpointDisplacementLine> midpoint_lines;
 
 void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, int height) {
@@ -29,9 +29,9 @@ void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, in
 }
 
 void ClearCanvas() {
-    fill(canvasData.begin(), canvasData.end(), 255); // Заполняем вектор 255 (Белый)
+    fill(canvasData.begin(), canvasData.end(), 255);
     glBindTexture(GL_TEXTURE_2D, canvasTexture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA, GL_UNSIGNED_BYTE, canvasData.data()); // Обновляем текстуру
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA, GL_UNSIGNED_BYTE, canvasData.data());
 }
 
 void create_midpoint_displacement_tools() {

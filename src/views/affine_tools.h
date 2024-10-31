@@ -4,13 +4,13 @@
 
 using std::vector, std::string;
 
-bool show_offset_window = false; // Флаг для показа окна смещения
-bool show_turning_window = false; // Флаг для показа окна углового смещения
-bool show_scaling_window = false; // Флаг для показа окна углового смещения
+bool show_offset_window = false;
+bool show_turning_window = false;
+bool show_scaling_window = false;
 bool is_setpoint = false;
 
-int offset_x = 0; // Значение смещения по X
-int offset_y = 0; // Значение смещения по Y
+int offset_x = 0;
+int offset_y = 0;
 int turning_value = 0;
 float scaling_value_x = 0;
 float scaling_value_y = 0;
@@ -22,7 +22,7 @@ AffineMatrix amatrix;
 ImVec2 center_point;
 
 void popup(const string& opt_name, Tool& current_tool) {
-    if (ImGui::BeginPopup(opt_name.c_str())) { // Начинаем создание выпадающего списка
+    if (ImGui::BeginPopup(opt_name.c_str())) {
         if (ImGui::Selectable("Center")) {
             if (!show_offset_window) {
                 amatrix.around_center = true;
@@ -44,15 +44,15 @@ void popup(const string& opt_name, Tool& current_tool) {
 
             }
         }
-        ImGui::EndPopup(); // Заканчиваем создание всплывающего окна
+        ImGui::EndPopup();
     }
 
 }
 
 void offset_window(vector<Polygon>& polygons) {
-    ImGui::Begin("Offset Settings", &show_offset_window); // Включаем кнопку закрытия окна
-    ImGui::InputInt("Offset X", &offset_x); // Поле для ввода смещения по X
-    ImGui::InputInt("Offset Y", &offset_y); // Поле для ввода смещения по Y
+    ImGui::Begin("Offset Settings", &show_offset_window);
+    ImGui::InputInt("Offset X", &offset_x);
+    ImGui::InputInt("Offset Y", &offset_y);
 
     if (ImGui::Button("Apply")) {
         amatrix.make_offset(offset_x, offset_y, polygons);
@@ -69,7 +69,7 @@ void offset_window(vector<Polygon>& polygons) {
 }
 
 void turning_window(vector<Polygon>& polygons) {
-    ImGui::Begin("Turning Settings", &show_turning_window); // Включаем кнопку закрытия окна
+    ImGui::Begin("Turning Settings", &show_turning_window);
 
     ImGui::InputInt("The angle in degree", &turning_value);
 
@@ -80,7 +80,6 @@ void turning_window(vector<Polygon>& polygons) {
             show_turning_window = false;
             is_setpoint = false;
         }
-        // else было бы неплохо выводить тут уведомление, что нужно установить точку
     }
 
     ImGui::SameLine();
@@ -104,7 +103,6 @@ void scaling_window(vector<Polygon>& polygons) {
             show_scaling_window = false;
             is_setpoint = false;
         }
-        // else было бы неплохо выводить тут уведомление, что нужно установить точку
     }
 
     ImGui::SameLine();
@@ -123,7 +121,7 @@ void create_affine_tools(vector<Polygon>& polygons, Tool& current_tool) {
         show_offset_window = true;
     }
     if (ImGui::Button("Turning")) {
-        ImGui::OpenPopup(turning_opt.c_str()); // Открываем всплывающее окно с опциями
+        ImGui::OpenPopup(turning_opt.c_str());
 
     }
 

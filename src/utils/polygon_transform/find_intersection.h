@@ -9,13 +9,10 @@ ImVec2 find_intersection(Line l1, Line l2) {
     ImVec2 d { l2.x1, l2.y1 };
     ImVec2 normal = { d.y - c.y, c.x - d.x };
 
-    // ������ ba = b - a
     ImVec2 ba = { b.x - a.x, b.y - a.y };
 
-    // ������ ac = a - c
     ImVec2 ac = { a.x - c.x, a.y - c.y };
 
-    // ���������� ��������� ������������
     float numerator = -(normal.x * ac.x + normal.y * ac.y);
     float denominator = normal.x * ba.x + normal.y * ba.y;
 
