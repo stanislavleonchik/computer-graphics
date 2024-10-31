@@ -27,13 +27,13 @@ add_executable(
         external/imgui/backends/imgui_impl_glfw.h
         external/stb/stb_image.h
         external/stb/stb_image_write.h
-
 		src/views/affine_tools.h
 		src/views/editor/editor.h
 		src/views/fractal_view/fractal_tools.h
 		src/views/line_controls.h
 		src/views/hsv_sliders.h
 		src/views/drawing_tools_view.h
+	src/utils/line_draw/BezierCurve.h
 		src/views/midpoint_displacement_tools.h
 
 		src/utils/converters/update_texture.h

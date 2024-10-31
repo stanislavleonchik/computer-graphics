@@ -10,6 +10,7 @@
 #include "../../supporting_files/handle_mouse_click_on_image.h"
 #include "../../utils/line_draw/draw_bresenham_line.h"
 #include "../../utils/line_draw/draw_wu_line.h"
+#include "../../utils/line_draw/BezierCurve.h"
 
 namespace Editor {
     auto create_editor(
@@ -40,11 +41,12 @@ namespace Editor {
 
         float menuHeight = ImGui::GetFrameHeightWithSpacing();
         ImGui::SetNextWindowPos(ImVec2(0, menuHeight));
-        ImGui::SetNextWindowSize(ImVec2(static_cast<float>(DISPLAY_WIDTH), static_cast<float>(DISPLAY_HEIGHT) - menuHeight));
+        ImGui::SetNextWindowSize(
+                ImVec2(static_cast<float>(DISPLAY_WIDTH), static_cast<float>(DISPLAY_HEIGHT) - menuHeight));
         ImGui::Begin("Editor", nullptr, window_flags);
         ImVec2 image_size(static_cast<float>(IMAGE_EDITOR_WIDTH), static_cast<float>(IMAGE_EDITOR_HEIGHT));
         ImVec2 image_pos = ImGui::GetCursorScreenPos();
-        ImGui::Image((void *)(intptr_t)textureID, image_size);
+        ImGui::Image((void *) (intptr_t) textureID, image_size);
 
         handle_mouse_click_on_image(
                 image_pos,
@@ -131,6 +133,18 @@ namespace Editor {
                 }
             }
         }
+
+        update_texture(
+                textureID,
+                EDITOR_IMAGE,
+                IMAGE_EDITOR_WIDTH,
+                IMAGE_EDITOR_HEIGHT,
+                IMAGE_EDITOR_CHANNELS
+        );
+
+        BezierCurve curve = BezierCurve();
+        curve.draw_points();
+        curve.draw_curves(menuHeight);
 
         update_texture(
                 textureID,

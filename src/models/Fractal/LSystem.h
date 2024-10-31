@@ -158,8 +158,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
     // Default parameters
     gosper_hexagonal_curve.default_params = FractalParams{
             1,  // lines_per_frame
-            7, // iterations
-            25, // initial_length
+            3, // iterations
+            8, // initial_length
             1, // initial_width
             1.0f, // width_reduce
             1.0f, // length_reduce
@@ -246,8 +246,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
 // Default parameters
     hex_mosaic.default_params = FractalParams{
             1,      // lines_per_frame
-            4,      // iterations
-            5,      // initial_length
+            6,      // iterations
+            30,      // initial_length
             1,      // initial_width
             1.0f,   // width_reduce
             1.0f,   // length_reduce

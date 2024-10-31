@@ -10,5 +10,5 @@ struct Fractal {
     std::vector<std::vector<FractalVertex>> verts = std::vector<std::vector<FractalVertex>>();
     LSystem lsystem;
     FractalParams fractal_params;
-    ImVec2 start_pos = {0.5f, 0.5f};
+    ImVec2 start_pos = {0.5f, 0.750f};
 };

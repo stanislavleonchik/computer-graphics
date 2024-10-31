@@ -64,9 +64,6 @@ int main() {
     const int IMAGE_EDITOR_CHANNELS = 4;
 
     unsigned char* EDITOR_IMAGE = create_blank_canvas(IMAGE_EDITOR_WIDTH, IMAGE_EDITOR_HEIGHT, IMAGE_EDITOR_CHANNELS);
-    float hue_adjust = 0.0f;
-    float saturation_adjust = 0.0f;
-    float brightness_adjust = 0.0f;
     int left_or_right = 2;
     int is_inside = 0;
 
