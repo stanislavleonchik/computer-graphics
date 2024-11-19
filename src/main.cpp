@@ -458,6 +458,8 @@ int main() {
     glDeleteShader(fragmentShader);
 
     bool is_tools_shown = true;
+    bool is_rot_tools_show = false;
+    bool is_axe = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
@@ -483,6 +485,9 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
+                if (ImGui::MenuItem("Rotation tools", NULL, is_rot_tools_show)) { 
+                    is_rot_tools_show = !is_rot_tools_show;
+                }
                 if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { currentPolyhedron = 0; }
                 if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { currentPolyhedron = 1; }
                 if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
@@ -533,6 +538,9 @@ int main() {
             ImGui::SliderFloat("Scale Z", &scaling[2], 0.1f, 5.0f);
 
             ImGui::End(); // Конец окна ImGui
+        }
+        if (is_rot_tools_show) {
+            show_rotation_tools(mesh);
         }
 
 
