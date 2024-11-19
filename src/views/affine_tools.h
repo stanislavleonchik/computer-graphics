@@ -1,6 +1,7 @@
 #include "../models/AffineMatrix.h"
 #include "../models/Polygon.h"
 #include "../models/Tool.h"
+#include <string>
 
 using std::vector, std::string;
 
@@ -22,7 +23,7 @@ AffineMatrix amatrix;
 ImVec2 center_point;
 
 void popup(const string& opt_name, Tool& current_tool) {
-    if (ImGui::BeginPopup(opt_name.c_str())) { // �������� �������� ����������� ������
+    if (ImGui::BeginPopup(opt_name.c_str())) { 
         if (ImGui::Selectable("Center")) {
             if (!show_offset_window) {
                 amatrix.around_center = true;
