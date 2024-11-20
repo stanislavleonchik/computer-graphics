@@ -117,6 +117,19 @@ struct Matrix4x4 { // Матрица 4x4 для трансформаций
         return result;
     }
 
+    static Matrix4x4 orthographic(float left, float right, float bottom, float top, float near, float far) {
+        Matrix4x4 result;
+
+        result.m[0][0] = 2.0f / (right - left);
+        result.m[1][1] = 2.0f / (top - bottom);
+        result.m[2][2] = -2.0f / (far - near);
+        result.m[3][0] = -(right + left) / (right - left);
+        result.m[3][1] = -(top + bottom) / (top - bottom);
+        result.m[3][2] = -(far + near) / (far - near);
+
+        return result;
+    }
+
     static Matrix4x4 lookAt(const Point3& eye, const Point3& center, const Point3& up) { // Создание матрицы просмотра (камера)
         Point3 f = (center - eye).normalize();
         Point3 s = f.cross(up).normalize();
@@ -657,6 +670,8 @@ int main() {
                                                          {"Octahedron", false}, {"Icosahedron", false},
                                                          {"Dodecahedron", false} };
     float globalScale = 1.0f;
+    static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
+    const char* projectionNames[] = { "Perspective", "Axonometric" };
 
     while (!glfwWindowShouldClose(window)) { // Основной цикл
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
@@ -679,6 +694,11 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
+                if (ImGui::BeginMenu("Projection")) {
+                    if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
+                    if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
+                    ImGui::EndMenu();
+                }
                 if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { currentPolyhedron = 0; }
                 if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { currentPolyhedron = 1; }
                 if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
@@ -691,6 +711,11 @@ int main() {
                     case 3: mesh = createIcosahedron(); break;
                     case 4: mesh = createDodecahedron(); break;
                 }
+                switch (currentPolyhedron) {
+                    case 0: mesh = createTetrahedron(); break;
+                    case 1: mesh = createHexahedron(); break;
+                }
+
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
 
@@ -759,8 +784,21 @@ int main() {
 
         Point3 figureCenter = calculateFigureCenter(mesh.vertices);
 
+        Matrix4x4 projection;
+        if (currentProjection == 0) {
+            projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f);
+        } else {
+            float orthoScale = 2.0f;
+            float aspectRatio = (float)screenWidth / screenHeight;
+            float left = -orthoScale * aspectRatio;
+            float right = orthoScale * aspectRatio;
+            float bottom = -orthoScale;
+            float top = orthoScale;
+            float near = 0.1f;
+            float far = 100.0f;
 
-        Matrix4x4 projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f); // Настройка матриц проекции и вида
+            projection = Matrix4x4::orthographic(left, right, bottom, top, near, far);
+        }
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
         Matrix4x4 model; // Создание матрицы модели и применение аффинных преобразований
