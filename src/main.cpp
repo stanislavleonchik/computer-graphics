@@ -539,11 +539,11 @@ int main() {
 
             ImGui::End(); // Конец окна ImGui
         }
+
+        Matrix4x4 rot_transform;
         if (is_rot_tools_show) {
-            show_rotation_tools(mesh);
+            show_rotation_tools(mesh, rot_transform);
         }
-
-
 
 
         Matrix4x4 projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f); // Настройка матриц проекции и вида
@@ -558,6 +558,8 @@ int main() {
         model = Matrix4x4::rotation(rotation[2] * M_PI / 180.0f, Point3(0.0f, 0.0f, 1.0f)) * model;
 
         model = Matrix4x4::translate(Point3(translation[0], translation[1], translation[2])) * model; // Применение смещения
+
+        model = rot_transform * model;
 
         Matrix4x4 mvp = model * projection * view; // Формирование общей матрицы MVP
         ImGui::Render();

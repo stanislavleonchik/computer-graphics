@@ -3,33 +3,50 @@
 
 #include "imgui.h"
 #include "Mesh.h"
+#include "Matrix4x4.h"
+#include<vector>
 
-size_t axe = 0;
+#define _USE_MATH_DEFINES
+#include<math.h>
+
+using std::vector;
+
+size_t axis = 0;
 float rotation_value = 0.0;
 bool show_custom_vec_window = false;
 Point3 x, y;
 
 void show_create_custom_vec() {
-	ImGui::Begin("Custom Vector");
+	ImGui::Begin("Custom Vector", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
 	ImGui::Text("First point");
-	ImGui::InputFloat("x", &x.x);
+
+	ImGui::PushItemWidth(50);
+	ImGui::InputFloat("x1", &x.x);
 	ImGui::SameLine();
-	ImGui::InputFloat("y", &x.y);
+	ImGui::InputFloat("y1", &x.y);
 	ImGui::SameLine();
-	ImGui::InputFloat("z", &x.z);
+	ImGui::InputFloat("z1", &x.z);
+	ImGui::PopItemWidth();
 	
 	ImGui::Text("Second point");
-	ImGui::InputFloat("x", &y.x);
+
+	ImGui::PushItemWidth(50);
+	ImGui::InputFloat("x2", &y.x);
 	ImGui::SameLine();
-	ImGui::InputFloat("y", &y.y);
+	ImGui::InputFloat("y2", &y.y);
 	ImGui::SameLine();
-	ImGui::InputFloat("z", &y.z);
+	ImGui::InputFloat("z2", &y.z);
+	ImGui::PopItemWidth();
 
 	if (ImGui::Button("Ok"))
 		show_custom_vec_window = false;
 
 	ImGui::End();
+}
+
+void reset(Matrix4x4& transform) {
+	transform = Matrix4x4();
 }
 
 Point3 CalculateMeshCenter(const Mesh& mesh) {
@@ -46,29 +63,33 @@ Point3 CalculateMeshCenter(const Mesh& mesh) {
 	return center;
 }
 
-void make_axe_rotation(Point3 center, Mesh& mesh)
+void make_axis_rotation(Point3 center, Matrix4x4& transforms)
 {
-	Point3 A; Point3 vec;
-	if (axe == 0) {
-		A = center;
-		vec = { 1, 0, 0 };
+	Point3 A; Point3 vec; //(l, m, n)
+	if (axis == 0) {
+		A = { 0.0, 0.0, 0.0 };
+		vec = { 1.0, 0.0, 0.0 };
 	}
-	else if (axe == 1) {
-		A = center;
-		vec = { 0, 1, 0 };
+	else if (axis == 1) {
+		A = { 0.0, 0.0, 0.0 };
+		vec = { 0.0, 1.0, 0.0 };
 	}
-	else if (axe == 2) {
-		A = center;
-		vec = { 0, 0, 1 };
+	else if (axis == 2) {
+		A = { 0.0, 0.0, 0.0 };
+		vec = { 0.0, 0.0, 1.0 };
 	}
-	else if (axe == 3) {
+	else if (axis == 3) {
 		A = x;
 		vec = x - y;
-		vec.normalize();
+		vec = vec.normalize();
 	}
 	else
 		return;
 
+	
+	transforms = Matrix4x4::translate(Point3(-A.x, -A.y, -A.z)) * transforms;
+	transforms = Matrix4x4::rotation(rotation_value * M_PI / 180.0f, vec) * transforms;
+	transforms = Matrix4x4::translate(A) * transforms;
 
 }
 
@@ -77,22 +98,24 @@ void draw_axes(Point3 center, float axisLength = 1.0f)
 {
 }
 
-void show_rotation_tools(Mesh& mesh) {
+void show_rotation_tools(Mesh& mesh, Matrix4x4& model) {
+
+	static Matrix4x4 transforms;
 
 	ImGui::Begin("Rotation tools");
 
-	auto center = CalculateMeshCenter(mesh);
+	Point3 center = { model.m[0][3], model.m[1][3], model.m[2][3] };
 	draw_axes(center);
 
-	ImGui::Text("Choose an axe");
-	if (ImGui::RadioButton("x", axe == 0)) axe = 0;
+	ImGui::Text("Choose an axis");
+	if (ImGui::RadioButton("x", axis == 0)) axis = 0;
 	ImGui::SameLine();
-	if (ImGui::RadioButton("y", axe == 1)) axe = 1;
+	if (ImGui::RadioButton("y", axis == 1)) axis = 1;
 	ImGui::SameLine();
-	if (ImGui::RadioButton("z", axe == 2)) axe = 2;
-	if (ImGui::RadioButton("custom vector", axe == 3)) {
+	if (ImGui::RadioButton("z", axis == 2)) axis = 2;
+	if (ImGui::RadioButton("custom vector", axis == 3)) {
 		show_custom_vec_window = true;
-		axe = 3;
+		axis = 3;
 	}
 
 	ImGui::Text("Rotation value: ");
@@ -101,10 +124,16 @@ void show_rotation_tools(Mesh& mesh) {
 	if (show_custom_vec_window)
 		show_create_custom_vec();
 
-	if(ImGui::Button("Ok"))
-		make_axe_rotation(center, mesh);
+	if (ImGui::Button("Ok")) {
+		make_axis_rotation(center, transforms);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reset"))
+		transforms = Matrix4x4();
 
 	ImGui::End();
+
+	model = transforms * model;
 }
 
 #endif // !ROTATION_TOOLS
