@@ -13,7 +13,6 @@
 #include "Mesh.h"
 #include "Matrix4x4.h"
 
-
 Mesh createTetrahedron() { // Функция для создания тетраэдра
     Mesh mesh;
     float sqrt2 = std::sqrt(2.0f);
@@ -464,6 +463,10 @@ int main() {
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
                                                          {"Dodecahedron", false} };
+    float globalScale = 1.0f;
+    static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
+    const char* projectionNames[] = { "Perspective", "Axonometric" };
+
     while (!glfwWindowShouldClose(window)) { // Основной цикл
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
 
@@ -485,8 +488,14 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
+
                 if (ImGui::MenuItem("Rotation tools", NULL, is_rot_tools_show)) { 
                     is_rot_tools_show = !is_rot_tools_show;
+                  
+                if (ImGui::BeginMenu("Projection")) {
+                    if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
+                    if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
+                    ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { currentPolyhedron = 0; }
                 if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { currentPolyhedron = 1; }
@@ -500,6 +509,11 @@ int main() {
                     case 3: mesh = createIcosahedron(); break;
                     case 4: mesh = createDodecahedron(); break;
                 }
+                switch (currentPolyhedron) {
+                    case 0: mesh = createTetrahedron(); break;
+                    case 1: mesh = createHexahedron(); break;
+                }
+
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
 
@@ -515,6 +529,13 @@ int main() {
         static float translation[3] = {0.0f, 0.0f, 0.0f};
         static float rotation[3] = {0.0f, 0.0f, 0.0f};
         static float scaling[3] = {1.0f, 1.0f, 1.0f};
+
+        static bool reflectXY = false;
+        static bool reflectXZ = false;
+        static bool reflectYZ = false;
+
+
+
         if (is_tools_shown) {
             ImGui::Begin("Affine Transformations", &is_tools_shown); // Начало окна ImGui
 
@@ -537,19 +558,83 @@ int main() {
             ImGui::SliderFloat("Scale Y", &scaling[1], 0.1f, 5.0f);
             ImGui::SliderFloat("Scale Z", &scaling[2], 0.1f, 5.0f);
 
-            ImGui::End(); // Конец окна ImGui
-        }
+            ImGui::Separator();
+
+            ImGui::Text("Reflection"); // Отражение
+            if (ImGui::Checkbox("Reflect XY", &reflectXY)) {
+                // Сбрасываем другие отражения, если выбрано это
+                if (reflectXY) { reflectXZ = false; reflectYZ = false; }
+            }
+            if (ImGui::Checkbox("Reflect XZ", &reflectXZ)) {
+                if (reflectXZ) { reflectXY = false; reflectYZ = false; }
+            }
+            if (ImGui::Checkbox("Reflect YZ", &reflectYZ)) {
+                if (reflectYZ) { reflectXY = false; reflectXZ = false; }
+            }
 
         Matrix4x4 rot_transform;
         if (is_rot_tools_show) {
             show_rotation_tools(mesh, rot_transform);
         }
 
+            ImGui::Separator();
 
-        Matrix4x4 projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f); // Настройка матриц проекции и вида
+            // Добавим слайдер для глобального масштаба
+            ImGui::Text("Global Scale"); // Глобальное масштабирование
+            ImGui::SliderFloat("Global Scale", &globalScale, 0.1f, 5.0f);
+
+
+            ImGui::End(); // Конец окна ImGui
+        }
+
+        Point3 figureCenter = calculateFigureCenter(mesh.vertices);
+
+        Matrix4x4 projection;
+        if (currentProjection == 0) {
+            projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f);
+        } else {
+            float orthoScale = 2.0f;
+            float aspectRatio = (float)screenWidth / screenHeight;
+            float left = -orthoScale * aspectRatio;
+            float right = orthoScale * aspectRatio;
+            float bottom = -orthoScale;
+            float top = orthoScale;
+            float near = 0.1f;
+            float far = 100.0f;
+
+            projection = Matrix4x4::orthographic(left, right, bottom, top, near, far);
+        }
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
         Matrix4x4 model; // Создание матрицы модели и применение аффинных преобразований
+
+        model = Matrix4x4::translate(Point3(-figureCenter.x, -figureCenter.y, -figureCenter.z)) * model;
+
+        // Шаг 2: Применяем масштабирование
+        model = Matrix4x4::scale(Point3(scaling[0] * globalScale, scaling[1] * globalScale, scaling[2] * globalScale)) * model;
+
+        // Шаг 3: Возвращаем фигуру обратно на её исходное место
+        model = Matrix4x4::translate(Point3(figureCenter.x, figureCenter.y, figureCenter.z)) * model;
+
+
+        if (reflectXY) { // Отражение относительно плоскости XY
+            Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(1.0f, 1.0f, -1.0f));
+            model = reflectMatrix * model;
+            //reflectXY = false;
+        }
+
+        if (reflectXZ) { // Отражение относительно плоскости XZ
+            Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(1.0f, -1.0f, 1.0f));
+            model = reflectMatrix * model;
+            //reflectXZ = false;
+        }
+
+        if (reflectYZ) { // Отражение относительно плоскости YZ
+            Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(-1.0f, 1.0f, 1.0f));
+            model = reflectMatrix * model;
+            //reflectYZ = false;
+        }
+
 
         model = Matrix4x4::scale(Point3(scaling[0], scaling[1], scaling[2])) * model; // Применение масштабирования
 
