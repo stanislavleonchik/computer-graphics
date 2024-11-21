@@ -29,7 +29,6 @@ void InitCanvasTexture(GLuint& texture, std::vector<GLubyte>& data,int width, in
 }
 
 void ClearCanvas() {
-
     fill(canvasData.begin(), canvasData.end(), 255);
     glBindTexture(GL_TEXTURE_2D, canvasTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvasWidth, canvasHeight, GL_RGBA, GL_UNSIGNED_BYTE, canvasData.data());
