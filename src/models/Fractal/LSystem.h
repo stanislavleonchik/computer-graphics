@@ -30,8 +30,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
             1,      // initial_width
             1.0f,      // width_reduce
             1.0f,      // length_reduce
-            {185,30,230}, // begin_color (SaddleBrown)
-            {200,180,208}, // end_color (ForestGreen)
+            {139,69,19}, // begin_color (SaddleBrown)
+            {34,139,34}, // end_color (ForestGreen)
             0.0f,  // angle_variation
             60.0   // angle
     };
@@ -51,8 +51,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
             1,      // initial_width
             1.0f,      // width_reduce
             1.0f,      // length_reduce
-            {185,30,230}, // begin_color (SaddleBrown)
-            {200,180,208}, // end_color (ForestGreen)
+            {139,69,19}, // begin_color (SaddleBrown)
+            {34,139,34}, // end_color (ForestGreen)
             0.0f,  // angle_variation
             60.0   // angle
     };
@@ -72,8 +72,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
             1, // initial_width
             1.0f, // width_reduce
             1.0f, // length_reduce
-            {185,30,230}, // begin_color (SaddleBrown)
-            {200,180,208}, // end_color (ForestGreen)
+            {139,69,19}, // begin_color (SaddleBrown)
+            {34,139,34}, // end_color (ForestGreen)
             0.0f, // angle_variation
             90.0 // angle
     };
@@ -94,8 +94,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
             1, // initial_width
             1.0f, // width_reduce
             1.0f, // length_reduce
-            {185,30,230}, // begin_color (SaddleBrown)
-            {200,180,208}, // end_color (ForestGreen)
+            {139,69,19}, // begin_color (SaddleBrown)
+            {34,139,34}, // end_color (ForestGreen)
             0.0f, // angle_variation
             60.0 // angle
     };
@@ -117,8 +117,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
             1, // initial_width
             1.0f, // width_reduce
             1.0f, // length_reduce
-            {185,30,230}, // begin_color (SaddleBrown)
-            {200,180,208}, // end_color (ForestGreen)
+            {139,69,19}, // begin_color (SaddleBrown)
+            {34,139,34}, // end_color (ForestGreen)
             0.0f, // angle_variation
             90.0 // angle
     };
@@ -140,8 +140,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
             1, // initial_width
             1.0f, // width_reduce
             1.0f, // length_reduce
-            {185,30,230}, // begin_color (SaddleBrown)
-            {200,180,208}, // end_color (ForestGreen)
+            {139,69,19}, // begin_color (SaddleBrown)
+            {34,139,34}, // end_color (ForestGreen)
             0.0f, // angle_variation
             90.0 // angle
     };
@@ -163,8 +163,8 @@ inline std::vector<LSystem> get_predefined_l_systems() {
             1, // initial_width
             1.0f, // width_reduce
             1.0f, // length_reduce
-            {185,30,230}, // begin_color (SaddleBrown)
-            {200,180,208}, // end_color (ForestGreen)
+            {139,69,19}, // begin_color (SaddleBrown)
+            {34,139,34}, // end_color (ForestGreen)
             0.0f, // angle_variation
             60.0 // angle
     };
