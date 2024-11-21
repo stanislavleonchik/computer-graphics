@@ -1,9 +1,9 @@
-#ifndef MESH_H
+п»ї#ifndef MESH_H
 #define MESH_H
 #include<vector>
 #include<cmath>
 
-struct Point3 { // Структура для представления точки в 3D пространстве
+struct Point3 { // РЎС‚СЂСѓРєС‚СѓСЂР° РґР»СЏ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёСЏ С‚РѕС‡РєРё РІ 3D РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµ
     float x, y, z;
 
     Point3() : x(0), y(0), z(0) {}
@@ -21,7 +21,7 @@ struct Point3 { // Структура для представления точки в 3D пространстве
         return { x * scalar, y * scalar, z * scalar };
     }
 
-    Point3 cross(const Point3& other) const { // Векторное произведение
+    Point3 cross(const Point3& other) const { // Р’РµРєС‚РѕСЂРЅРѕРµ РїСЂРѕРёР·РІРµРґРµРЅРёРµ
         return {
                 y * other.z - z * other.y,
                 z * other.x - x * other.z,
@@ -29,11 +29,11 @@ struct Point3 { // Структура для представления точки в 3D пространстве
         };
     }
 
-    float dot(const Point3& other) const { // Скалярное произведение
+    float dot(const Point3& other) const { // РЎРєР°Р»СЏСЂРЅРѕРµ РїСЂРѕРёР·РІРµРґРµРЅРёРµ
         return x * other.x + y * other.y + z * other.z;
     }
 
-    Point3 normalize() const { // Нормализация вектора
+    Point3 normalize() const { // РќРѕСЂРјР°Р»РёР·Р°С†РёСЏ РІРµРєС‚РѕСЂР°
         float len = std::sqrt(x * x + y * y + z * z);
         if (len > 0)
             return { x / len, y / len, z / len };
@@ -41,14 +41,14 @@ struct Point3 { // Структура для представления точки в 3D пространстве
     }
 };
 
-struct Polygon3 { // Структура полигона
+struct Polygon3 { // РЎС‚СЂСѓРєС‚СѓСЂР° РїРѕР»РёРіРѕРЅР°
     std::vector<int> vertex_indices;
 };
 
-struct Mesh { // Меш
+struct Mesh { // РњРµС€
     std::vector<Point3> vertices;
     std::vector<Polygon3> polygons;
     std::vector<unsigned int> indices;
-}; // Индексы для отрисовки
+}; // РРЅРґРµРєСЃС‹ РґР»СЏ РѕС‚СЂРёСЃРѕРІРєРё
 
 #endif // !MESH_H

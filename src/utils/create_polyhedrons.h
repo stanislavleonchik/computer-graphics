@@ -1,9 +1,9 @@
-#ifndef CREATE_POLYH_H
+п»ї#ifndef CREATE_POLYH_H
 #define CREATE_POLYH_H
 
 #include"Mesh.h"
 
-Mesh createTetrahedron() { // Функция для создания тетраэдра
+Mesh createTetrahedron() { // Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ С‚РµС‚СЂР°СЌРґСЂР°
     Mesh mesh;
     float sqrt2 = std::sqrt(2.0f);
 
@@ -21,7 +21,7 @@ Mesh createTetrahedron() { // Функция для создания тетраэдра
             {{1, 2, 3}}
     };
 
-    mesh.indices.clear(); // Создание списка индексов
+    mesh.indices.clear(); // РЎРѕР·РґР°РЅРёРµ СЃРїРёСЃРєР° РёРЅРґРµРєСЃРѕРІ
     for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
@@ -34,7 +34,7 @@ Mesh createTetrahedron() { // Функция для создания тетраэдра
     return mesh;
 }
 
-Mesh createHexahedron() { // Функция для создания гексаэдра (куба)
+Mesh createHexahedron() { // Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РіРµРєСЃР°СЌРґСЂР° (РєСѓР±Р°)
     Mesh mesh;
 
     mesh.vertices = {
@@ -50,14 +50,14 @@ Mesh createHexahedron() { // Функция для создания гексаэдра (куба)
 
     mesh.polygons = {
             {{0, 1, 2, 3}},
-            {{4, 5, 6, 7}}, // Задняя грань
-            {{0, 1, 5, 4}}, // Передняя грань
-            {{2, 3, 7, 6}}, // Нижняя грань
-            {{0, 3, 7, 4}}, // Верхняя грань
-            {{1, 2, 6, 5}} // Левая грань
-    }; // Правая грань
+            {{4, 5, 6, 7}}, // Р—Р°РґРЅСЏСЏ РіСЂР°РЅСЊ
+            {{0, 1, 5, 4}}, // РџРµСЂРµРґРЅСЏСЏ РіСЂР°РЅСЊ
+            {{2, 3, 7, 6}}, // РќРёР¶РЅСЏСЏ РіСЂР°РЅСЊ
+            {{0, 3, 7, 4}}, // Р’РµСЂС…РЅСЏСЏ РіСЂР°РЅСЊ
+            {{1, 2, 6, 5}} // Р›РµРІР°СЏ РіСЂР°РЅСЊ
+    }; // РџСЂР°РІР°СЏ РіСЂР°РЅСЊ
 
-    mesh.indices.clear(); // Создание списка индексов
+    mesh.indices.clear(); // РЎРѕР·РґР°РЅРёРµ СЃРїРёСЃРєР° РёРЅРґРµРєСЃРѕРІ
     for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
@@ -70,7 +70,7 @@ Mesh createHexahedron() { // Функция для создания гексаэдра (куба)
     return mesh;
 }
 
-Mesh createOctahedron() { // Функция для создания октаэдра
+Mesh createOctahedron() { // Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РѕРєС‚Р°СЌРґСЂР°
     Mesh mesh;
 
     mesh.vertices = {
@@ -93,7 +93,7 @@ Mesh createOctahedron() { // Функция для создания октаэдра
             {{3, 0, 5}}
     };
 
-    mesh.indices.clear(); // Создание списка индексов
+    mesh.indices.clear(); // РЎРѕР·РґР°РЅРёРµ СЃРїРёСЃРєР° РёРЅРґРµРєСЃРѕРІ
     for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
@@ -106,7 +106,7 @@ Mesh createOctahedron() { // Функция для создания октаэдра
     return mesh;
 }
 
-Mesh createIcosahedron() { // Функция для создания икосаэдра
+Mesh createIcosahedron() { // Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РёРєРѕСЃР°СЌРґСЂР°
     Mesh mesh;
     const float t = (1.0 + std::sqrt(5.0)) / 2.0;
 
@@ -132,11 +132,11 @@ Mesh createIcosahedron() { // Функция для создания икосаэдра
             {{4, 9, 5}}, {{2, 4, 11}}, {{6, 2, 10}}, {{8, 6, 7}}, {{9, 8, 1}}
     };
 
-    for (auto& v : mesh.vertices) { // Нормализация вершин для единичной сферы
+    for (auto& v : mesh.vertices) { // РќРѕСЂРјР°Р»РёР·Р°С†РёСЏ РІРµСЂС€РёРЅ РґР»СЏ РµРґРёРЅРёС‡РЅРѕР№ СЃС„РµСЂС‹
         v = v.normalize();
     }
 
-    mesh.indices.clear(); // Создание списка индексов
+    mesh.indices.clear(); // РЎРѕР·РґР°РЅРёРµ СЃРїРёСЃРєР° РёРЅРґРµРєСЃРѕРІ
     for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
@@ -149,14 +149,14 @@ Mesh createIcosahedron() { // Функция для создания икосаэдра
     return mesh;
 }
 
-Mesh createDodecahedron() { // Функция для создания додекаэдра
+Mesh createDodecahedron() { // Р¤СѓРЅРєС†РёСЏ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РґРѕРґРµРєР°СЌРґСЂР°
     Mesh mesh;
     const float phi = (1.0 + std::sqrt(5.0)) / 2.0;
-    const float a = 1.0f; // Золотое сечение
+    const float a = 1.0f; // Р—РѕР»РѕС‚РѕРµ СЃРµС‡РµРЅРёРµ
     const float b = 1.0f / phi;
     const float c = 2.0f - phi;
 
-    mesh.vertices = { // Координаты вершин додекаэдра
+    mesh.vertices = { // РљРѕРѕСЂРґРёРЅР°С‚С‹ РІРµСЂС€РёРЅ РґРѕРґРµРєР°СЌРґСЂР°
             { c,  0,  a},
             {-c,  0,  a}, // 1
             {-b,  b,  b}, // 2
@@ -179,11 +179,11 @@ Mesh createDodecahedron() { // Функция для создания додекаэдра
             { a, -c,  0} // 19
     }; // 20
 
-    for (auto& v : mesh.vertices) { // Нормализация вершин
+    for (auto& v : mesh.vertices) { // РќРѕСЂРјР°Р»РёР·Р°С†РёСЏ РІРµСЂС€РёРЅ
         v = v.normalize();
     }
 
-    mesh.polygons = { // Грани додекаэдра (каждая грань - пятиугольник)
+    mesh.polygons = { // Р“СЂР°РЅРё РґРѕРґРµРєР°СЌРґСЂР° (РєР°Р¶РґР°СЏ РіСЂР°РЅСЊ - РїСЏС‚РёСѓРіРѕР»СЊРЅРёРє)
             {{0, 1, 2, 3, 4}},
             {{0, 5, 6, 7, 1}},
             {{0, 4, 16, 19, 5}},
@@ -197,7 +197,7 @@ Mesh createDodecahedron() { // Функция для создания додекаэдра
             {{9, 15, 17, 18, 10}},
     };
 
-    mesh.indices.clear(); // Создание списка индексов
+    mesh.indices.clear(); // РЎРѕР·РґР°РЅРёРµ СЃРїРёСЃРєР° РёРЅРґРµРєСЃРѕРІ
     for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];

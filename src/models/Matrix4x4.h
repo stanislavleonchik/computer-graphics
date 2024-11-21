@@ -1,16 +1,16 @@
-#ifndef MATRIX4X4_H
+п»ї#ifndef MATRIX4X4_H
 #define MATRIX4X4_H
 
-struct Matrix4x4 { // Матрица 4x4 для трансформаций
+struct Matrix4x4 { // РњР°С‚СЂРёС†Р° 4x4 РґР»СЏ С‚СЂР°РЅСЃС„РѕСЂРјР°С†РёР№
     float m[4][4]{};
 
     Matrix4x4() {
-        for (int i = 0; i < 4; ++i) // Инициализация единичной матрицей
+        for (int i = 0; i < 4; ++i) // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РµРґРёРЅРёС‡РЅРѕР№ РјР°С‚СЂРёС†РµР№
             for (int j = 0; j < 4; ++j)
                 m[i][j] = (i == j) ? 1.0f : 0.0f;
     }
 
-    Matrix4x4 operator*(const Matrix4x4& other) const { // Умножение матриц
+    Matrix4x4 operator*(const Matrix4x4& other) const { // РЈРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС†
         Matrix4x4 result;
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j) {
@@ -21,7 +21,7 @@ struct Matrix4x4 { // Матрица 4x4 для трансформаций
         return result;
     }
 
-    Point3 operator*(const Point3& v) const { // Умножение матрицы на вектор
+    Point3 operator*(const Point3& v) const { // РЈРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС†С‹ РЅР° РІРµРєС‚РѕСЂ
         float x = m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z + m[3][0];
         float y = m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z + m[3][1];
         float z = m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z + m[3][2];
@@ -36,7 +36,7 @@ struct Matrix4x4 { // Матрица 4x4 для трансформаций
         return { x, y, z };
     }
 
-    static Matrix4x4 perspective(float fov, float aspect, float near1, float far1) { // Создание матрицы перспективной проекции
+    static Matrix4x4 perspective(float fov, float aspect, float near1, float far1) { // РЎРѕР·РґР°РЅРёРµ РјР°С‚СЂРёС†С‹ РїРµСЂСЃРїРµРєС‚РёРІРЅРѕР№ РїСЂРѕРµРєС†РёРё
         Matrix4x4 result;
         float tanHalfFov = std::tan(fov / 2);
 
@@ -61,7 +61,7 @@ struct Matrix4x4 { // Матрица 4x4 для трансформаций
         return result;
     }
 
-    static Matrix4x4 lookAt(const Point3& eye, const Point3& center, const Point3& up) { // Создание матрицы просмотра (камера)
+    static Matrix4x4 lookAt(const Point3& eye, const Point3& center, const Point3& up) { // РЎРѕР·РґР°РЅРёРµ РјР°С‚СЂРёС†С‹ РїСЂРѕСЃРјРѕС‚СЂР° (РєР°РјРµСЂР°)
         Point3 f = (center - eye).normalize();
         Point3 s = f.cross(up).normalize();
         Point3 u = s.cross(f);
