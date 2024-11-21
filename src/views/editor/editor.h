@@ -134,14 +134,6 @@ namespace Editor {
             }
         }
 
-        update_texture(
-                textureID,
-                EDITOR_IMAGE,
-                IMAGE_EDITOR_WIDTH,
-                IMAGE_EDITOR_HEIGHT,
-                IMAGE_EDITOR_CHANNELS
-        );
-
         BezierCurve curve = BezierCurve();
         curve.draw_points();
         curve.draw_curves(menuHeight);
