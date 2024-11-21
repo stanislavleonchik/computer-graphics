@@ -220,6 +220,21 @@ Mesh createDodecahedron() { // Функция для создания додек
     return mesh;
 }
 
+Point3 calculateFigureCenter(const std::vector<Point3>& vertices) {
+    Point3 center = { 0.0f, 0.0f, 0.0f };
+    for (const auto& vertex : vertices) {
+        center.x += vertex.x;
+        center.y += vertex.y;
+        center.z += vertex.z;
+    }
+    // Получаем среднее значение по каждой оси
+    int numVertices = vertices.size();
+    center.x /= numVertices;
+    center.y /= numVertices;
+    center.z /= numVertices;
+    return center;
+}
+
 GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
     GLuint shader = glCreateShader(type);
     const char* src_cstr = source.c_str();
@@ -338,6 +353,7 @@ void setup_imgui(GLFWwindow* window) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
 
+    io.Fonts->AddFontFromFileTTF("D:/учёба/4 курс/КГ/CG3D/assets/helvetica_regular.otf", 16.0f); //"../assets/helvetica_regular.otf"
     io.FontDefault = io.Fonts->Fonts.back();
 
     unsigned char* tex_pixels = nullptr;
@@ -489,7 +505,7 @@ int main() {
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
 
-                if (ImGui::MenuItem("Rotation tools", NULL, is_rot_tools_show)) { 
+                if (ImGui::MenuItem("Rotation tools", NULL, is_rot_tools_show))  
                     is_rot_tools_show = !is_rot_tools_show;
                   
                 if (ImGui::BeginMenu("Projection")) {
@@ -572,10 +588,6 @@ int main() {
                 if (reflectYZ) { reflectXY = false; reflectXZ = false; }
             }
 
-        Matrix4x4 rot_transform;
-        if (is_rot_tools_show) {
-            show_rotation_tools(mesh, rot_transform);
-        }
 
             ImGui::Separator();
 
@@ -585,6 +597,11 @@ int main() {
 
 
             ImGui::End(); // Конец окна ImGui
+        }
+
+        Matrix4x4 rot_transform;
+        if (is_rot_tools_show) {
+            show_rotation_tools(mesh, rot_transform);
         }
 
         Point3 figureCenter = calculateFigureCenter(mesh.vertices);
@@ -599,10 +616,10 @@ int main() {
             float right = orthoScale * aspectRatio;
             float bottom = -orthoScale;
             float top = orthoScale;
-            float near = 0.1f;
-            float far = 100.0f;
+            float near1 = 0.1f;
+            float far1 = 100.0f;
 
-            projection = Matrix4x4::orthographic(left, right, bottom, top, near, far);
+            projection = Matrix4x4::orthographic(left, right, bottom, top, near1, far1);
         }
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 

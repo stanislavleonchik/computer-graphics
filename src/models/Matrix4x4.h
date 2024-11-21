@@ -50,6 +50,17 @@ struct Matrix4x4 { // Матрица 4x4 для трансформаций
         return result;
     }
 
+    static Matrix4x4 orthographic(float left, float right, float bottom, float top, float near1, float far1) {
+        Matrix4x4 result;
+        result.m[0][0] = 2.0f / (right - left);
+        result.m[1][1] = 2.0f / (top - bottom);
+        result.m[2][2] = -2.0f / (far1 - near1);
+        result.m[3][0] = -(right + left) / (right - left);
+        result.m[3][1] = -(top + bottom) / (top - bottom);
+        result.m[3][2] = -(far1 + near1) / (far1 - near1);
+        return result;
+    }
+
     static Matrix4x4 lookAt(const Point3& eye, const Point3& center, const Point3& up) { // Создание матрицы просмотра (камера)
         Point3 f = (center - eye).normalize();
         Point3 s = f.cross(up).normalize();
