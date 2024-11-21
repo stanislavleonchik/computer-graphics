@@ -131,7 +131,7 @@ void setup_imgui(GLFWwindow* window) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
 
-    io.Fonts->AddFontFromFileTTF("D:/учёба/4 курс/КГ/CG3D/assets/helvetica_regular.otf", 16.0f); //"../assets/helvetica_regular.otf"
+    io.Fonts->AddFontFromFileTTF("assets/helvetica_regular.otf", 16.0f); 
     io.FontDefault = io.Fonts->Fonts.back();
 
     unsigned char* tex_pixels = nullptr;
