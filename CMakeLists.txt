@@ -16,6 +16,8 @@ include_directories(${OPENGL_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/external)
 include_directories(${CMAKE_SOURCE_DIR}/external/imgui)
 include_directories(${CMAKE_SOURCE_DIR}/external/imgui/backends)
+include_directories(${CMAKE_SOURCE_DIR}/src/views)
+include_directories(${CMAKE_SOURCE_DIR}/src/models)
 
 add_executable(
 		computer-graphics src/main.cpp
@@ -71,6 +73,10 @@ add_executable(
 		src/models/3D/Mesh.h
 		src/models/3D/VertexNormal.h
 		src/views/editor3d/Editor3DView.h
+		src/views/rotation_tools.h
+		src/models/Mesh.h
+		src/models/Matrix4x4.h
+
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw glad)
