@@ -1,4 +1,4 @@
-#ifndef AFFIEN_TRANS_3D_H
+п»ї#ifndef AFFIEN_TRANS_3D_H
 #define AFFINE_TRANS_3D_H
 
 #include "Mesh.h"
@@ -23,7 +23,7 @@ static float rotation_val[4] = { 0.0, 0.0, 0.0 , 0.0 };
 bool show_custom_vec_window = false;
 Point3 x, y;
 
-void reset_transformations() { //сброс параметров
+void reset_transformations() { //СЃР±СЂРѕСЃ РїР°СЂР°РјРµС‚СЂРѕРІ
     translation[0] = 0.0; translation[1] = 0.0; translation[2] = 0.0;
     rotation[0] = 0.0; rotation[1] = 0.0; rotation[2] = 0.0;
     scaling[0] = 1.0; scaling[1] = 1.0; scaling[2] = 1.0;
@@ -35,7 +35,7 @@ void reset_transformations() { //сброс параметров
 }
 
 
-//окно для задания вектора, вокруг которого будет крутиться объект
+//РѕРєРЅРѕ РґР»СЏ Р·Р°РґР°РЅРёСЏ РІРµРєС‚РѕСЂР°, РІРѕРєСЂСѓРі РєРѕС‚РѕСЂРѕРіРѕ Р±СѓРґРµС‚ РєСЂСѓС‚РёС‚СЊСЃСЏ РѕР±СЉРµРєС‚
 void show_create_custom_vec() {
     ImGui::Begin("Custom Vector", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
@@ -65,7 +65,7 @@ void show_create_custom_vec() {
     ImGui::End();
 }
 
-//вычисление центра фигуры
+//РІС‹С‡РёСЃР»РµРЅРёРµ С†РµРЅС‚СЂР° С„РёРіСѓСЂС‹
 Point3 calculateFigureCenter(const std::vector<Point3>& vertices) {
     Point3 center = { 0.0f, 0.0f, 0.0f };
     for (const auto& vertex : vertices) {
@@ -73,7 +73,7 @@ Point3 calculateFigureCenter(const std::vector<Point3>& vertices) {
         center.y += vertex.y;
         center.z += vertex.z;
     }
-    // Получаем среднее значение по каждой оси
+    // РџРѕР»СѓС‡Р°РµРј СЃСЂРµРґРЅРµРµ Р·РЅР°С‡РµРЅРёРµ РїРѕ РєР°Р¶РґРѕР№ РѕСЃРё
     int numVertices = vertices.size();
     center.x /= numVertices;
     center.y /= numVertices;
@@ -81,7 +81,7 @@ Point3 calculateFigureCenter(const std::vector<Point3>& vertices) {
     return center;
 }
 
-void make_axis_rotation(Point3 center, Matrix4x4& transforms)
+void make_vec_rotation(Matrix4x4& transforms)
 {
     Point3 vec = x - y;
     vec = vec.normalize();
@@ -92,75 +92,81 @@ void make_axis_rotation(Point3 center, Matrix4x4& transforms)
 
 void make_affine_transforms(Matrix4x4& model, Mesh mesh) {
 
-    figureCenter = calculateFigureCenter(mesh.vertices);
-    model = Matrix4x4::translate(Point3(-figureCenter.x, -figureCenter.y, -figureCenter.z)) * model;
+    //figureCenter = calculateFigureCenter(mesh.vertices);
+    //model = Matrix4x4::translate(Point3(-figureCenter.x, -figureCenter.y, -figureCenter.z)) * model;
 
-    // Шаг 2: Применяем масштабирование и поворот
-    model = Matrix4x4::scale(Point3(scaling[0] * globalScale, scaling[1] * globalScale, scaling[2] * globalScale)) * model;
-    model = Matrix4x4::rotation(rotation_val[0] * M_PI / 180.0, Point3(1.0, 0.0, 0.0)) * model;
-    model = Matrix4x4::rotation(rotation_val[1] * M_PI / 180.0, Point3(0.0, 1.0, 0.0)) * model;
-    model = Matrix4x4::rotation(rotation_val[2] * M_PI / 180.0, Point3(0.0, 0.0, 1.0)) * model;
+    //// РЁР°Рі 2: РџСЂРёРјРµРЅСЏРµРј РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ Рё РїРѕРІРѕСЂРѕС‚
+    //model = Matrix4x4::scale(Point3(scaling[0] * globalScale, scaling[1] * globalScale, scaling[2] * globalScale)) * model;
 
-    // Шаг 3: Возвращаем фигуру обратно на её исходное место
-    model = Matrix4x4::translate(figureCenter) * model;
+    //// РЁР°Рі 3: Р’РѕР·РІСЂР°С‰Р°РµРј С„РёРіСѓСЂСѓ РѕР±СЂР°С‚РЅРѕ РЅР° РµС‘ РёСЃС…РѕРґРЅРѕРµ РјРµСЃС‚Рѕ
+    //model = Matrix4x4::translate(figureCenter) * model;
 
-    if (reflectXY) { // Отражение относительно плоскости XY
+    if (reflectXY) { // РћС‚СЂР°Р¶РµРЅРёРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РїР»РѕСЃРєРѕСЃС‚Рё XY
         Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(1.0f, 1.0f, -1.0f));
         model = reflectMatrix * model;
         //reflectXY = false;
     }
 
-    if (reflectXZ) { // Отражение относительно плоскости XZ
+    if (reflectXZ) { // РћС‚СЂР°Р¶РµРЅРёРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РїР»РѕСЃРєРѕСЃС‚Рё XZ
         Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(1.0f, -1.0f, 1.0f));
         model = reflectMatrix * model;
         //reflectXZ = false;
     }
 
-    if (reflectYZ) { // Отражение относительно плоскости YZ
+    if (reflectYZ) { // РћС‚СЂР°Р¶РµРЅРёРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РїР»РѕСЃРєРѕСЃС‚Рё YZ
         Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(-1.0f, 1.0f, 1.0f));
         model = reflectMatrix * model;
         //reflectYZ = false;
     }
 
 
-    model = Matrix4x4::scale(Point3(scaling[0], scaling[1], scaling[2])) * model; // Применение масштабирования
+    model = Matrix4x4::scale(Point3(scaling[0], scaling[1], scaling[2])) * model; // РџСЂРёРјРµРЅРµРЅРёРµ РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ
 
-    model = Matrix4x4::rotation(rotation[0] * M_PI / 180.0f, Point3(1.0f, 0.0f, 0.0f)) * model; // Применение вращения (последовательно вокруг осей X, Y, Z)
+    model = Matrix4x4::rotation(rotation[0] * M_PI / 180.0f, Point3(1.0f, 0.0f, 0.0f)) * model; // РџСЂРёРјРµРЅРµРЅРёРµ РІСЂР°С‰РµРЅРёСЏ (РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕ РІРѕРєСЂСѓРі РѕСЃРµР№ X, Y, Z)
     model = Matrix4x4::rotation(rotation[1] * M_PI / 180.0f, Point3(0.0f, 1.0f, 0.0f)) * model;
     model = Matrix4x4::rotation(rotation[2] * M_PI / 180.0f, Point3(0.0f, 0.0f, 1.0f)) * model;
 
-    model = Matrix4x4::translate(Point3(translation[0], translation[1], translation[2])) * model; // Применение смещения
+    model = Matrix4x4::translate(Point3(translation[0], translation[1], translation[2])) * model; // РџСЂРёРјРµРЅРµРЅРёРµ СЃРјРµС‰РµРЅРёСЏ
+
+    //РїРѕС‚РѕРјСѓ С‡С‚Рѕ РЅР° СЃР°РјРѕРј РґРµР»Рµ РїРѕРІРѕСЂРѕС‚С‹ Рё РёР·РјРµРЅРµРЅРёРµ РјР°СЃС€С‚Р°Р±Р° РЅР°РґРѕ РїСЂРёРјРµРЅСЏС‚СЊ РїРѕСЃР»Рµ С‚РѕРіРѕ РєР°Рє РјС‹ РїРµСЂРµРјРµСЃС‚РёРј РµС‘
+    //СЌС‚Рѕ СЃРїСЂР°РІРµРґР»РёРІРѕ С‚РѕР»СЊРєРѕ РґР»СЏ РЅР°С€РµР№ СЂРµР°Р»РёР·Р°С†РёРё, РїРѕСЃРєРѕР»СЊРєСѓ Р·РЅР°С‡РµРЅРёРµ С†РµРЅС‚СЂР° С„РёРіСѓСЂС‹ Рё Р·РЅР°С‡РµРЅРёСЏ РІРµСЂС€РёРЅ РЅРёРєРѕРіРґР° РЅРµ РјРµРЅСЏСЋС‚СЃСЏ
+    model = Matrix4x4::scale(Point3(scaling[0] * globalScale, scaling[1] * globalScale, scaling[2] * globalScale)) * model;
+    model = Matrix4x4::rotation(rotation_val[0] * M_PI / 180.0f, Point3(1.0f, 0.0f, 0.0f)) * model;
+    model = Matrix4x4::rotation(rotation_val[1] * M_PI / 180.0f, Point3(0.0f, 1.0f, 0.0f)) * model;
+    model = Matrix4x4::rotation(rotation_val[2] * M_PI / 180.0f, Point3(0.0f, 0.0f, 1.0f)) * model;
+
+    make_vec_rotation(model);
 }
 
-void create_affine_tools(bool is_shown) {
+void create_affine_tools(bool& is_shown) {
 
 
-    ImGui::Begin("Affine Transformations", &is_shown); // Начало окна ImGui
+    ImGui::Begin("Affine Transformations", &is_shown); // РќР°С‡Р°Р»Рѕ РѕРєРЅР° ImGui
 
-    ImGui::Text("Translation"); // Смещение
+    ImGui::Text("Translation"); // РЎРјРµС‰РµРЅРёРµ
     ImGui::SliderFloat("X", &translation[0], -5.0f, 5.0f);
     ImGui::SliderFloat("Y", &translation[1], -5.0f, 5.0f);
     ImGui::SliderFloat("Z", &translation[2], -5.0f, 5.0f);
 
     ImGui::Separator();
 
-    ImGui::Text("Rotation (degrees)"); // Вращение
+    ImGui::Text("Rotation (degrees)"); // Р’СЂР°С‰РµРЅРёРµ
     ImGui::SliderFloat("Pitch", &rotation[0], -180.0f, 180.0f);
     ImGui::SliderFloat("Yaw", &rotation[1], -180.0f, 180.0f);
     ImGui::SliderFloat("Roll", &rotation[2], -180.0f, 180.0f);
 
     ImGui::Separator();
 
-    ImGui::Text("Scaling"); // Масштабирование
+    ImGui::Text("Scaling"); // РњР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ
     ImGui::SliderFloat("Scale X", &scaling[0], 0.1f, 5.0f);
     ImGui::SliderFloat("Scale Y", &scaling[1], 0.1f, 5.0f);
     ImGui::SliderFloat("Scale Z", &scaling[2], 0.1f, 5.0f);
 
     ImGui::Separator();
 
-    ImGui::Text("Reflection"); // Отражение
+    ImGui::Text("Reflection"); // РћС‚СЂР°Р¶РµРЅРёРµ
     if (ImGui::Checkbox("Reflect XY", &reflectXY)) {
-        // Сбрасываем другие отражения, если выбрано это
+        // РЎР±СЂР°СЃС‹РІР°РµРј РґСЂСѓРіРёРµ РѕС‚СЂР°Р¶РµРЅРёСЏ, РµСЃР»Рё РІС‹Р±СЂР°РЅРѕ СЌС‚Рѕ
         if (reflectXY) { reflectXZ = false; reflectYZ = false; }
     }
     if (ImGui::Checkbox("Reflect XZ", &reflectXZ)) {
@@ -171,8 +177,8 @@ void create_affine_tools(bool is_shown) {
     }
     ImGui::Separator();
 
-    // Добавим слайдер для глобального масштаба
-    ImGui::Text("Global Scale"); // Глобальное масштабирование
+    // Р”РѕР±Р°РІРёРј СЃР»Р°Р№РґРµСЂ РґР»СЏ РіР»РѕР±Р°Р»СЊРЅРѕРіРѕ РјР°СЃС€С‚Р°Р±Р°
+    ImGui::Text("Global Scale"); // Р“Р»РѕР±Р°Р»СЊРЅРѕРµ РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ
     ImGui::SliderFloat("Global Scale", &globalScale, 0.1f, 5.0f);
 
     ImGui::Separator();
@@ -200,7 +206,7 @@ void create_affine_tools(bool is_shown) {
         reset_transformations();
 
 
-    ImGui::End(); // Конец окна ImGui
+    ImGui::End(); // РљРѕРЅРµС† РѕРєРЅР° ImGui
     
 }
 
