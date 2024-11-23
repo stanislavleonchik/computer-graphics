@@ -4,236 +4,14 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <vector>
-#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <map>
-#include "rotation_tools.h"
 #include "Mesh.h"
 #include "Matrix4x4.h"
-
-Mesh createTetrahedron() { // Функция для создания тетраэдра
-    Mesh mesh;
-    float sqrt2 = std::sqrt(2.0f);
-
-    mesh.vertices = {
-            Point3(1, 0, -1 / sqrt2),
-            Point3(-1, 0, -1 / sqrt2),
-            Point3(0, 1, 1 / sqrt2),
-            Point3(0, -1, 1 / sqrt2)
-    };
-
-    mesh.polygons = {
-            {{0, 1, 2}},
-            {{0, 1, 3}},
-            {{0, 2, 3}},
-            {{1, 2, 3}}
-    };
-
-    mesh.indices.clear(); // Создание списка индексов
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
-
-    return mesh;
-}
-
-Mesh createHexahedron() { // Функция для создания гексаэдра (куба)
-    Mesh mesh;
-
-    mesh.vertices = {
-            Point3(-0.5f, -0.5f, -0.5f),
-            Point3(0.5f, -0.5f, -0.5f),
-            Point3(0.5f,  0.5f, -0.5f),
-            Point3(-0.5f,  0.5f, -0.5f),
-            Point3(-0.5f, -0.5f,  0.5f),
-            Point3(0.5f, -0.5f,  0.5f),
-            Point3(0.5f,  0.5f,  0.5f),
-            Point3(-0.5f,  0.5f,  0.5f)
-    };
-
-    mesh.polygons = {
-            {{0, 1, 2, 3}},
-            {{4, 5, 6, 7}}, // Задняя грань
-            {{0, 1, 5, 4}}, // Передняя грань
-            {{2, 3, 7, 6}}, // Нижняя грань
-            {{0, 3, 7, 4}}, // Верхняя грань
-            {{1, 2, 6, 5}} // Левая грань
-    }; // Правая грань
-
-    mesh.indices.clear(); // Создание списка индексов
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
-
-    return mesh;
-}
-
-Mesh createOctahedron() { // Функция для создания октаэдра
-    Mesh mesh;
-
-    mesh.vertices = {
-            Point3(1, 0, 0),
-            Point3(-1, 0, 0),
-            Point3(0, 1, 0),
-            Point3(0, -1, 0),
-            Point3(0, 0, 1),
-            Point3(0, 0, -1)
-    };
-
-    mesh.polygons = {
-            {{0, 2, 4}},
-            {{2, 1, 4}},
-            {{1, 3, 4}},
-            {{3, 0, 4}},
-            {{0, 2, 5}},
-            {{2, 1, 5}},
-            {{1, 3, 5}},
-            {{3, 0, 5}}
-    };
-
-    mesh.indices.clear(); // Создание списка индексов
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
-
-    return mesh;
-}
-
-Mesh createIcosahedron() { // Функция для создания икосаэдра
-    Mesh mesh;
-    const float t = (1.0 + std::sqrt(5.0)) / 2.0;
-
-    mesh.vertices = {
-            Point3(-1,  t,  0),
-            Point3( 1,  t,  0),
-            Point3(-1, -t,  0),
-            Point3( 1, -t,  0),
-            Point3( 0, -1,  t),
-            Point3( 0,  1,  t),
-            Point3( 0, -1, -t),
-            Point3( 0,  1, -t),
-            Point3( t,  0, -1),
-            Point3( t,  0,  1),
-            Point3(-t,  0, -1),
-            Point3(-t,  0,  1)
-    };
-
-    mesh.polygons = {
-            {{0, 11, 5}}, {{0, 5, 1}}, {{0, 1, 7}}, {{0, 7, 10}}, {{0, 10, 11}},
-            {{1, 5, 9}}, {{5, 11, 4}}, {{11, 10, 2}}, {{10, 7, 6}}, {{7, 1, 8}},
-            {{3, 9, 4}}, {{3, 4, 2}}, {{3, 2, 6}}, {{3, 6, 8}}, {{3, 8, 9}},
-            {{4, 9, 5}}, {{2, 4, 11}}, {{6, 2, 10}}, {{8, 6, 7}}, {{9, 8, 1}}
-    };
-
-    for (auto& v : mesh.vertices) { // Нормализация вершин для единичной сферы
-        v = v.normalize();
-    }
-
-    mesh.indices.clear(); // Создание списка индексов
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
-
-    return mesh;
-}
-
-Mesh createDodecahedron() { // Функция для создания додекаэдра
-    Mesh mesh;
-    const float phi = (1.0 + std::sqrt(5.0)) / 2.0;
-    const float a = 1.0f; // Золотое сечение
-    const float b = 1.0f / phi;
-    const float c = 2.0f - phi;
-
-    mesh.vertices = { // Координаты вершин додекаэдра
-            { c,  0,  a},
-            {-c,  0,  a}, // 1
-            {-b,  b,  b}, // 2
-            { 0,  a,  c}, // 3
-            { b,  b,  b}, // 4
-            { b, -b,  b}, // 5
-            { 0, -a,  c}, // 6
-            {-b, -b,  b}, // 7
-            { c,  0, -a}, // 8
-            {-c,  0, -a}, // 9
-            {-b, -b, -b}, // 10
-            { 0, -a, -c}, // 11
-            { b, -b, -b}, // 12
-            { b,  b, -b}, // 13
-            { 0,  a, -c}, // 14
-            {-b,  b, -b}, // 15
-            { a,  c,  0}, // 16
-            {-a,  c,  0}, // 17
-            {-a, -c,  0}, // 18
-            { a, -c,  0} // 19
-    }; // 20
-
-    for (auto& v : mesh.vertices) { // Нормализация вершин
-        v = v.normalize();
-    }
-
-    mesh.polygons = { // Грани додекаэдра (каждая грань - пятиугольник)
-            {{0, 1, 2, 3, 4}},
-            {{0, 5, 6, 7, 1}},
-            {{0, 4, 16, 19, 5}},
-            {{1, 7, 18, 17, 2}},
-            {{2, 17, 15, 14, 3}},
-            {{3, 14, 13, 16, 4}},
-            {{6, 11}},
-            {{8, 9, 10, 11, 12}},
-            {{8, 13, 14, 15, 9}},
-            {{8, 12, 19, 16, 13}},
-            {{9, 15, 17, 18, 10}},
-    };
-
-    mesh.indices.clear(); // Создание списка индексов
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
-
-    return mesh;
-}
-
-Point3 calculateFigureCenter(const std::vector<Point3>& vertices) {
-    Point3 center = { 0.0f, 0.0f, 0.0f };
-    for (const auto& vertex : vertices) {
-        center.x += vertex.x;
-        center.y += vertex.y;
-        center.z += vertex.z;
-    }
-    // Получаем среднее значение по каждой оси
-    int numVertices = vertices.size();
-    center.x /= numVertices;
-    center.y /= numVertices;
-    center.z /= numVertices;
-    return center;
-}
+#include "create_polyhedrons.h"
+#include "affine_transforms3D.h"
 
 GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
     GLuint shader = glCreateShader(type);
@@ -376,7 +154,10 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Для Mac OS X
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Lemotech 3D", nullptr, nullptr); // Создание окна
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor(); // Получаем указатель на основной монитор
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor); // Получаем текущее разрешение монитора
+
+    GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "Lemotech 3D", nullptr, nullptr); // Создание окна
     if (!window) {
         std::cerr << "Не удалось создать окно GLFW" << std::endl;
         glfwTerminate();
@@ -473,13 +254,11 @@ int main() {
     glDeleteShader(fragmentShader);
 
     bool is_tools_shown = true;
-    bool is_rot_tools_show = false;
-    bool is_axe = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
                                                          {"Dodecahedron", false} };
-    float globalScale = 1.0f;
+    
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     const char* projectionNames[] = { "Perspective", "Axonometric" };
 
@@ -504,10 +283,7 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
-
-                if (ImGui::MenuItem("Rotation tools", NULL, is_rot_tools_show))  
-                    is_rot_tools_show = !is_rot_tools_show;
-                  
+             
                 if (ImGui::BeginMenu("Projection")) {
                     if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
                     if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
@@ -541,70 +317,11 @@ int main() {
             ImGui::EndMainMenuBar();
         }
 
-
-        static float translation[3] = {0.0f, 0.0f, 0.0f};
-        static float rotation[3] = {0.0f, 0.0f, 0.0f};
-        static float scaling[3] = {1.0f, 1.0f, 1.0f};
-
-        static bool reflectXY = false;
-        static bool reflectXZ = false;
-        static bool reflectYZ = false;
-
-
-
+        Matrix4x4 model;
         if (is_tools_shown) {
-            ImGui::Begin("Affine Transformations", &is_tools_shown); // Начало окна ImGui
-
-            ImGui::Text("Translation"); // Смещение
-            ImGui::SliderFloat("X", &translation[0], -5.0f, 5.0f);
-            ImGui::SliderFloat("Y", &translation[1], -5.0f, 5.0f);
-            ImGui::SliderFloat("Z", &translation[2], -5.0f, 5.0f);
-
-            ImGui::Separator();
-
-            ImGui::Text("Rotation (degrees)"); // Вращение
-            ImGui::SliderFloat("Pitch", &rotation[0], -180.0f, 180.0f);
-            ImGui::SliderFloat("Yaw", &rotation[1], -180.0f, 180.0f);
-            ImGui::SliderFloat("Roll", &rotation[2], -180.0f, 180.0f);
-
-            ImGui::Separator();
-
-            ImGui::Text("Scaling"); // Масштабирование
-            ImGui::SliderFloat("Scale X", &scaling[0], 0.1f, 5.0f);
-            ImGui::SliderFloat("Scale Y", &scaling[1], 0.1f, 5.0f);
-            ImGui::SliderFloat("Scale Z", &scaling[2], 0.1f, 5.0f);
-
-            ImGui::Separator();
-
-            ImGui::Text("Reflection"); // Отражение
-            if (ImGui::Checkbox("Reflect XY", &reflectXY)) {
-                // Сбрасываем другие отражения, если выбрано это
-                if (reflectXY) { reflectXZ = false; reflectYZ = false; }
-            }
-            if (ImGui::Checkbox("Reflect XZ", &reflectXZ)) {
-                if (reflectXZ) { reflectXY = false; reflectYZ = false; }
-            }
-            if (ImGui::Checkbox("Reflect YZ", &reflectYZ)) {
-                if (reflectYZ) { reflectXY = false; reflectXZ = false; }
-            }
-
-
-            ImGui::Separator();
-
-            // Добавим слайдер для глобального масштаба
-            ImGui::Text("Global Scale"); // Глобальное масштабирование
-            ImGui::SliderFloat("Global Scale", &globalScale, 0.1f, 5.0f);
-
-
-            ImGui::End(); // Конец окна ImGui
+            create_affine_tools(is_tools_shown);
         }
-
-        Matrix4x4 rot_transform;
-        if (is_rot_tools_show) {
-            show_rotation_tools(mesh, rot_transform);
-        }
-
-        Point3 figureCenter = calculateFigureCenter(mesh.vertices);
+        make_affine_transforms(model, mesh);
 
         Matrix4x4 projection;
         if (currentProjection == 0) {
@@ -622,46 +339,6 @@ int main() {
             projection = Matrix4x4::orthographic(left, right, bottom, top, near1, far1);
         }
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
-        Matrix4x4 model; // Создание матрицы модели и применение аффинных преобразований
-
-        model = Matrix4x4::translate(Point3(-figureCenter.x, -figureCenter.y, -figureCenter.z)) * model;
-
-        // Шаг 2: Применяем масштабирование
-        model = Matrix4x4::scale(Point3(scaling[0] * globalScale, scaling[1] * globalScale, scaling[2] * globalScale)) * model;
-
-        // Шаг 3: Возвращаем фигуру обратно на её исходное место
-        model = Matrix4x4::translate(Point3(figureCenter.x, figureCenter.y, figureCenter.z)) * model;
-
-
-        if (reflectXY) { // Отражение относительно плоскости XY
-            Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(1.0f, 1.0f, -1.0f));
-            model = reflectMatrix * model;
-            //reflectXY = false;
-        }
-
-        if (reflectXZ) { // Отражение относительно плоскости XZ
-            Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(1.0f, -1.0f, 1.0f));
-            model = reflectMatrix * model;
-            //reflectXZ = false;
-        }
-
-        if (reflectYZ) { // Отражение относительно плоскости YZ
-            Matrix4x4 reflectMatrix = Matrix4x4::scale(Point3(-1.0f, 1.0f, 1.0f));
-            model = reflectMatrix * model;
-            //reflectYZ = false;
-        }
-
-
-        model = Matrix4x4::scale(Point3(scaling[0], scaling[1], scaling[2])) * model; // Применение масштабирования
-
-        model = Matrix4x4::rotation(rotation[0] * M_PI / 180.0f, Point3(1.0f, 0.0f, 0.0f)) * model; // Применение вращения (последовательно вокруг осей X, Y, Z)
-        model = Matrix4x4::rotation(rotation[1] * M_PI / 180.0f, Point3(0.0f, 1.0f, 0.0f)) * model;
-        model = Matrix4x4::rotation(rotation[2] * M_PI / 180.0f, Point3(0.0f, 0.0f, 1.0f)) * model;
-
-        model = Matrix4x4::translate(Point3(translation[0], translation[1], translation[2])) * model; // Применение смещения
-
-        model = rot_transform * model;
 
         Matrix4x4 mvp = model * projection * view; // Формирование общей матрицы MVP
         ImGui::Render();
