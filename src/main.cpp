@@ -12,6 +12,7 @@
 #include "Matrix4x4.h"
 #include "create_polyhedrons.h"
 #include "affine_transforms3D.h"
+#include "rotation_figure_creator.h"
 
 GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
     GLuint shader = glCreateShader(type);
@@ -92,7 +93,7 @@ void processCursorToggle(GLFWwindow* window) {
     } else {
         if (pressed) {
             pressed = false;
-            glfwSetCursorPosCallback(window, nullptr);
+            glfwSetCursorPosCallback(window, ImGui_ImplGlfw_CursorPosCallback);
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
     }
@@ -186,6 +187,7 @@ int main() {
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
 
     Mesh mesh = createDodecahedron(); // Переменная для текущего меша
+    Mesh rf_figure;
 
     for (const auto& poly : mesh.polygons) { // Создание списка индексов
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
@@ -253,7 +255,8 @@ int main() {
     glDeleteShader(vertexShader); // Удаление шейдеров, они больше не нужны
     glDeleteShader(fragmentShader);
 
-    bool is_tools_shown = true;
+    bool is_tools_shown = false;
+    bool is_rf_creator_shown = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
@@ -266,8 +269,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
 
         glfwPollEvents(); // Обработка событий
-
-
+        
         processCursorToggle(window);
         processInput(window, nearPlaneDistance);
 
@@ -283,7 +285,7 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
-             
+                
                 if (ImGui::BeginMenu("Projection")) {
                     if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
                     if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
@@ -294,23 +296,23 @@ int main() {
                 if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
                 if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
                 if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
+                if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; currentPolyhedron = 5; rf_figure = Mesh(); }
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
                     case 1: mesh = createHexahedron(); break;
                     case 2: mesh = createOctahedron(); break;
                     case 3: mesh = createIcosahedron(); break;
                     case 4: mesh = createDodecahedron(); break;
-                }
-                switch (currentPolyhedron) {
-                    case 0: mesh = createTetrahedron(); break;
-                    case 1: mesh = createHexahedron(); break;
+                    case 5: mesh = rf_figure; break;
                 }
 
-                glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+                if (!mesh.vertices.empty()) {
+                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
 
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                }
 
                 ImGui::EndMenu();
             }
@@ -320,6 +322,9 @@ int main() {
         Matrix4x4 model;
         if (is_tools_shown) {
             create_affine_tools(is_tools_shown);
+        }
+        if (is_rf_creator_shown) {
+            rf_tools(is_rf_creator_shown, window, rf_figure);
         }
         make_affine_transforms(model, mesh);
 
