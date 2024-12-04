@@ -42,7 +42,7 @@ struct Point3 { // Структура для представления точк
 };
 
 struct Polygon3 { // Структура полигона
-    std::vector<int> vertex_indices;
+    std::vector<unsigned> vertex_indices;
 };
 
 struct Mesh { // Меш
