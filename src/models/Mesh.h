@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿// Mesh.h
+#pragma once
 #include<vector>
 #include<cmath>
 
@@ -14,6 +15,10 @@ struct Point3 { // Структура для представления точк
 
     Point3 operator-(const Point3& other) const {
         return { x - other.x, y - other.y, z - other.z };
+    }
+
+    Point3 operator-() const {
+        return { -x, -y, -z };
     }
 
     Point3 operator*(float scalar) const {
@@ -54,8 +59,9 @@ struct VertexNormal {
     float x, y, z;
 };
 
-struct Mesh { // Меш
+struct Mesh {
     std::vector<Point3> vertices;
     std::vector<Polygon3> polygons;
-    std::vector<unsigned int> indices;
-}; // Индексы для отрисовки
+    std::vector<unsigned int> faceIndices; // Indices for drawing faces
+    std::vector<unsigned int> edgeIndices; // Indices for drawing edges
+};

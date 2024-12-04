@@ -14,6 +14,7 @@
 #include "affine_transforms3D.h"
 #include "load_obj.h"
 #include "save_obj.h"
+#include <chrono>
 
 GLuint CompileShader(GLenum type, const std::string& source);
 
@@ -21,18 +22,16 @@ double lastX, lastY; // Глобальные переменные для упр�
 float yaw = -90.0f;
 float pitch = 0.0f;
 bool firstMouse = true;
+bool pressed = false;
 
 Point3 cameraPos(0.0f, 0.0f, 3.0f);
 Point3 cameraFront(0.0f, 0.0f, -1.0f);
 Point3 cameraUp(0.0f, 1.0f, 0.0f);
 
-std::string modelFilePath = "";
-
-void processInput(GLFWwindow* window, float& nearPlaneDistance);
+void processInput(GLFWwindow* window);
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
-bool pressed = false;
 void processCursorToggle(GLFWwindow* window);
 
 void setup_style(ImGuiStyle& style, ImGuiIO& io);
@@ -97,50 +96,73 @@ int main() {
 
     Mesh mesh = createDodecahedron(); // Переменная для текущего меша
 
-    for (const auto& poly : mesh.polygons) { // Создание списка индексов
+    for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
             int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
+            mesh.edgeIndices.push_back(idx0);
+            mesh.edgeIndices.push_back(idx1);
+        }
+        for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
+            mesh.faceIndices.push_back(poly.vertex_indices[0]);
+            mesh.faceIndices.push_back(poly.vertex_indices[i]);
+            mesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
         }
     }
 
-    GLuint VBO, VAO, EBO; // Создание VBO и VAO
-    glGenVertexArrays(1, &VAO); // Vertex Array Object (сохраняет все настройки, которые относятся к вершинным данным (VBO и EBO))
-    glGenBuffers(1, &VBO); // Vertex Buffer Object (хранит данные самих вершин)
-    glGenBuffers(1, &EBO); // Element Buffer Object (хранит индексы вершин, которые помогают переиспользовать одни и те же вершины)
+    GLuint VBO;
+    GLuint faceVAO, faceEBO;
+    GLuint edgeVAO, edgeEBO;
 
-    glBindVertexArray(VAO); // Привязка VAO
+    glGenVertexArrays(1, &faceVAO);
+    glGenVertexArrays(1, &edgeVAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &faceEBO);
+    glGenBuffers(1, &edgeEBO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // Вершинный буфер
+// Set up face VAO
+    glBindVertexArray(faceVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // Индексный буфер
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr); // Настройка вершинных атрибутов
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
-    glBindVertexArray(0); // Отвязываем VAO
+// Set up edge VAO
+    glBindVertexArray(edgeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); // VBO is already filled
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
+    glEnableVertexAttribArray(0);
 
-    std::string vertexShaderSource = R"( // Загрузка и компиляция шейдеров
-        #version 410 core
-        layout(location = 0) in vec3 aPos;
+    glBindVertexArray(0);
 
-        uniform mat4 uMVP;
+    std::string vertexShaderSource = R"(
+#version 410 core
+layout(location = 0) in vec3 aPos;
 
-        void main() {
-            gl_Position = uMVP * vec4(aPos, 1.0);
-        }
+uniform mat4 uMVP;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+}
     )";
 
     std::string fragmentShaderSource = R"(
-        #version 410 core
-        out vec4 FragColor;
+#version 410 core
 
-        void main() {
-    FragColor = vec4(gl_FragCoord.x / 3000.0, gl_FragCoord.y / 1500.0, gl_FragCoord.y / 1500.0, 1.0);
+uniform vec4 color;
+uniform bool useUniformColor;
+
+out vec4 FragColor;
+void main() {
+    if (useUniformColor) {
+        FragColor = color;
+    } else {
+        FragColor = vec4(gl_FragCoord.x / 2800.0, gl_FragCoord.y / 1600.0, 1600.0, 1.0);
+    }
 }
     )";
 
@@ -165,21 +187,26 @@ int main() {
 
     bool is_tools_shown = true;
     static int currentPolyhedron = 4;
-    const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
-                                                         {"Octahedron", false}, {"Icosahedron", false},
-                                                         {"Dodecahedron", false} };
-    
-    static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
-    const char* projectionNames[] = { "Perspective", "Axonometric" };
 
+    static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
+    GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP");
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "color");
+    GLint useUniformColorLoc = glGetUniformLocation(shaderProgram, "useUniformColor");
     while (!glfwWindowShouldClose(window)) { // Основной цикл
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
+        float currentTime = std::chrono::duration<float>(
+                std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
+        // Используем шейдерную программу
+        glUseProgram(shaderProgram);
+
+        // Обновляем значение переменной time
+        GLint timeLocation = glGetUniformLocation(shaderProgram, "time");
+        glUniform1f(timeLocation, currentTime);
         glfwPollEvents(); // Обработка событий
 
-
         processCursorToggle(window);
-        processInput(window, nearPlaneDistance);
+        processInput(window);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -189,17 +216,13 @@ int main() {
         if (is_tools_shown) {
             create_affine_tools(is_tools_shown);
         }
-        make_affine_transforms(model);
+        make_affine_transforms(model, mesh);
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Clean")) {}
                 if (ImGui::MenuItem("Save")) {
-                    /*
-                    /Users/controldata/GitHub/computer-graphics/src/models/saved_mesh.obj
-                    */
-                    std::string savePath;
-                    std::cin >> savePath;
+                    std::string savePath = "../assets/saved_mesh.obj";
                     Mesh transformedMesh = mesh;
                     for (auto& vertex : transformedMesh.vertices) {
                         vertex = model * vertex;
@@ -207,49 +230,59 @@ int main() {
                     saveOBJ(transformedMesh, savePath);
                     std::cout << "Модель сохранена в файл: " << savePath << std::endl;
                 }
-                if (ImGui::MenuItem("Load Model")) {
-                    reset_transformations();
-                    /*
-                    /Users/controldata/Downloads/utah_teapot_lowpoly.obj
-                    */
-                    std::cin >> modelFilePath;
-                    mesh = loadOBJ(modelFilePath);
-                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
-                }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("View")) {
-                if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
-             
-                if (ImGui::BeginMenu("Projection")) {
-                    if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
-                    if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
-                    ImGui::EndMenu();
-                }
+            if (ImGui::BeginMenu("Model")) {
                 if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { currentPolyhedron = 0; }
                 if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { currentPolyhedron = 1; }
                 if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
                 if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
                 if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
+                if (ImGui::MenuItem("Teapot", NULL, currentPolyhedron == 5)) { currentPolyhedron = 5; }
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
-                    case 1: mesh = createHexahedron(); break;
-                    case 2: mesh = createOctahedron(); break;
-                    case 3: mesh = createIcosahedron(); break;
-                    case 4: mesh = createDodecahedron(); break;
+                    case 1: mesh = loadOBJ("../assets/diamond.obj"); break;
+                    case 2: mesh = loadOBJ("../assets/octahedron.obj"); break;
+                    case 3: mesh = loadOBJ("../assets/icosahedron.obj"); break;
+                    case 4: mesh = loadOBJ("../assets/dodecahedron.obj"); break;
+                    case 5: mesh = loadOBJ("../assets/utah_teapot_lowpoly.obj"); break;
                 }
 
+                mesh.faceIndices.clear();
+                mesh.edgeIndices.clear();
+                for (const auto& poly : mesh.polygons) {
+                    for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
+                        int idx0 = poly.vertex_indices[i];
+                        int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
+                        mesh.edgeIndices.push_back(idx0);
+                        mesh.edgeIndices.push_back(idx1);
+                    }
+                    for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
+                        mesh.faceIndices.push_back(poly.vertex_indices[0]);
+                        mesh.faceIndices.push_back(poly.vertex_indices[i]);
+                        mesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
+                    }
+                }
+
+                // Update VBO (vertex buffer)
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
 
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+// Update faceEBO
+                glBindVertexArray(faceVAO);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+
+// Update edgeEBO
+                glBindVertexArray(edgeVAO);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
 
                 ImGui::EndMenu();
             }
+            if (ImGui::MenuItem("Show Tools", NULL, is_tools_shown == 1)) { is_tools_shown = !is_tools_shown; }
+            if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
+            if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
             ImGui::EndMainMenuBar();
         }
 
@@ -268,28 +301,40 @@ int main() {
 
             projection = Matrix4x4::orthographic(left, right, bottom, top, near1, far1);
         }
+
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-        Matrix4x4 mvp = model * projection * view; // Формирование общей матрицы MVP
+        Matrix4x4 mvp = projection * view * model; // Правильный порядок умножения матриц
+
         ImGui::Render();
 
+        glUseProgram(shaderProgram);
 
-        glUseProgram(shaderProgram); // Использование шейдерной программы
+        // Set the MVP matrix
+        glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
 
-        GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP"); // Передача матрицы MVP в шейдер
-        glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, &mvp.m[0][0]);
+        // --- Draw Faces with Gradient Color ---
+        glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
+        glBindVertexArray(faceVAO);
+        glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
 
-        glBindVertexArray(VAO); // Привязка VAO и отрисовка меша
-        glDrawElements(GL_LINES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
+        // --- Draw Edges in White Color ---
+        glUniform1i(useUniformColorLoc, GL_TRUE); // Use uniform color
+        glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 1.0f); // Set color to white
+        glBindVertexArray(edgeVAO);
+        glDrawElements(GL_LINES, mesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData()); // Обновление окна
         glfwSwapBuffers(window);
     }
 
-    glDeleteVertexArrays(1, &VAO); // Очистка ресурсов
+    glDeleteVertexArrays(1, &faceVAO);
+    glDeleteVertexArrays(1, &edgeVAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1, &faceEBO);
+    glDeleteBuffers(1, &edgeEBO);
 
     glfwTerminate();
     return 0;
@@ -310,55 +355,40 @@ GLuint CompileShader(GLenum type, const std::string& source) { // Функция
     }
     return shader;
 }
-void processInput(GLFWwindow* window, float& nearPlaneDistance) {
+
+void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        nearPlaneDistance += 0.02f; // Увеличиваем ближнюю плоскость при движении вперёд
-        if (nearPlaneDistance > 99.0f) nearPlaneDistance = 99.0f; // Ограничение для дальности
+        translation[2] += 0.02f;
+        if (translation[2] > 99.0f) translation[2] = 99.0f;
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        nearPlaneDistance -= 0.02f; // Уменьшаем ближнюю плоскость при движении назад
-        if (nearPlaneDistance < -10.0f) nearPlaneDistance = -10.0f; // Ограничение для близости
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        translation[2] -= 0.02f;
+        if (translation[2] < -10.0f) translation[2] = -10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        translation[0] += 0.02f;
+        if (translation[0] > 99.0f) translation[0] = 99.0f;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        translation[0] -= 0.02f;
+        if (translation[0] < -10.0f) translation[0] = -10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        translation[1] += 0.02f;
+        if (translation[1] > 99.0f) translation[1] = 99.0f;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        translation[1] -= 0.02f;
+        if (translation[1] < -10.0f) translation[1] = -10.0f;
     }
 }
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
 
-    auto xoffset = static_cast<float>(xpos - lastX);
-    auto yoffset = static_cast<float>(lastY - ypos);
-    lastX = xpos;
-    lastY = ypos;
-
-    float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f) // Ограничение угла обзора по вертикали
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    Point3 front; // Обновление направления камеры
-    front.x = std::cos(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
-    front.y = std::sin(pitch * M_PI / 180.0f);
-    front.z = std::sin(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
-    cameraFront = front.normalize();
-    Point3 worldUp(0.0f, 1.0f, 0.0f);
-    Point3 cameraRight = cameraFront.cross(worldUp).normalize();
-    cameraUp = cameraRight.cross(cameraFront).normalize();
-}
 void processCursorToggle(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         if (!pressed) {
             pressed = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            firstMouse = true; // Reset firstMouse flag
         }
     } else {
         if (pressed) {
@@ -367,6 +397,52 @@ void processCursorToggle(GLFWwindow* window) {
         }
     }
 }
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
+        if (firstMouse) {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
+
+        float xoffset = static_cast<float>(xpos - lastX);
+        float yoffset = static_cast<float>(lastY - ypos); // Reversed since y-coordinates range from bottom to top
+        lastX = xpos;
+        lastY = ypos;
+
+        float sensitivity = 0.1f;
+        xoffset *= sensitivity;
+        yoffset *= sensitivity;
+
+        yaw += xoffset;
+        pitch += yoffset;
+
+        // Clamp the pitch angle
+        if (pitch > 89.0f) pitch = 89.0f;
+        if (pitch < -89.0f) pitch = -89.0f;
+
+        float yawRad = yaw * static_cast<float>(M_PI) / 180.0f;
+        float pitchRad = pitch * static_cast<float>(M_PI) / 180.0f;
+
+        Point3 front;
+        front.x = std::cos(yawRad) * std::cos(pitchRad);
+        front.y = std::sin(pitchRad);
+        front.z = std::sin(yawRad) * std::cos(pitchRad);
+        cameraFront = front.normalize();
+
+        // Update cameraUp vector
+        Point3 worldUp(0.0f, 1.0f, 0.0f);
+        Point3 cameraRight = cameraFront.cross(worldUp).normalize();
+        cameraUp = cameraRight.cross(cameraFront).normalize();
+    } else {
+        firstMouse = true; // Reset firstMouse flag when cursor is not disabled
+    }
+
+    // Pass event to ImGui
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+}
+
 void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.FrameRounding = 12.0f;
     style.FrameBorderSize = 1.0f;
@@ -389,26 +465,31 @@ void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.Colors[ImGuiCol_Border] = borderColor;
     style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
+
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
+    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         mouse_callback(window, xpos, ypos);
     }
     // Передача события в ImGui
     ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
 }
+
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
+
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
 }
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
 }
+
 void char_callback(GLFWwindow* window, unsigned int codepoint) {
     ImGui_ImplGlfw_CharCallback(window, codepoint);
 }
+
 void setup_imgui(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

@@ -80,13 +80,21 @@ Mesh loadOBJ(const std::string& path) {
     mesh.vertices = temp_vertices;
 
     // Создание списка индексов для отрисовки линий
-    mesh.indices.clear();
+    mesh.faceIndices.clear();
+    mesh.edgeIndices.clear();
     for (const auto& poly : mesh.polygons) {
+        // Create edge indices
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
             int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
+            mesh.edgeIndices.push_back(idx0);
+            mesh.edgeIndices.push_back(idx1);
+        }
+        // Create face indices (triangulate the polygon)
+        for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
+            mesh.faceIndices.push_back(poly.vertex_indices[0]);
+            mesh.faceIndices.push_back(poly.vertex_indices[i]);
+            mesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
         }
     }
 
