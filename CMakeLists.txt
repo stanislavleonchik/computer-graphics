@@ -76,6 +76,8 @@ add_executable(
 		src/views/editor3d/Editor3DView.h
 		src/models/Mesh.h
 		src/models/Matrix4x4.h
+		src/views/rotation_figure_creator.h
+		src/views/rotation_figure_creator.cpp
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw glad)
