@@ -1,6 +1,9 @@
 # Графический редактор "Lemotech"
 Проект по дисциплине CS332 Компьютерная графика
 ---
+<img width="956" alt="image" src="https://github.com/user-attachments/assets/5d272fd3-4956-4f9d-a463-4ee731101836">
+
+
 ```
 git clone https://github.com/glfw/glfw.git external/glfw
 ```
