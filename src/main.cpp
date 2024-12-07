@@ -5,16 +5,13 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <map>
 #include "Mesh.h"
 #include "Matrix4x4.h"
-#include "create_polyhedrons.h"
 #include "affine_transforms3D.h"
 #include "load_obj.h"
 #include "save_obj.h"
-#include <chrono>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
 
 GLuint CompileShader(GLenum type, const std::string& source);
 
@@ -28,10 +25,10 @@ Point3 cameraPos(0.0f, 0.0f, 3.0f);
 Point3 cameraFront(0.0f, 0.0f, -1.0f);
 Point3 cameraUp(0.0f, 1.0f, 0.0f);
 
-static Point3 camObjPos(-2.133f, -1.0f, 2.434f);
+static Point3 camObjPos(-2.133f, 1.0f, 2.434f);
 static Point3 camObjRot(0.0f, 0.0f, 0.0f);
 static float camObjScale = 0.1f;
-static float cameraRadius = 3.0f;
+static float cameraRadius = 7.0f;
 float angle = 0.0f;
 float angularSpeed = 1.0f;
 static bool CCTV = false;
@@ -336,6 +333,7 @@ void main() {
                 if (ImGui::MenuItem("Sphere", NULL, currentPolyhedron == 7)) { currentPolyhedron = 7; }
                 if (ImGui::MenuItem("Shuttle", NULL, currentPolyhedron == 8)) { currentPolyhedron = 8; }
                 if (ImGui::MenuItem("USS Enterprise", NULL, currentPolyhedron == 9)) { currentPolyhedron = 9; }
+                if (ImGui::MenuItem("Soul", NULL, currentPolyhedron == 10)) { currentPolyhedron = 10; }
                 switch (currentPolyhedron) {
                     case 0: mesh = loadOBJ("../assets/tetrahedron.obj"); break;
                     case 1: mesh = loadOBJ("../assets/diamond.obj"); break;
@@ -347,6 +345,7 @@ void main() {
                     case 7: mesh = loadOBJ("../assets/sphere.obj"); break;
                     case 8: mesh = loadOBJ("../assets/shuttle.obj"); break;
                     case 9: mesh = loadOBJ("../assets/ussenterprise.obj"); break;
+                    case 10: mesh = loadOBJ("../assets/soul.obj"); break;
                 }
 
                 mesh.faceIndices.clear();

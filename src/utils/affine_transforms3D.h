@@ -19,7 +19,7 @@ Point3 figureCenter;
 size_t axis = 0;
 static float rotation_val[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 bool show_custom_vec_window = false;
-Point3 x, y;
+Point3 xInput, yInput;
 
 void reset_transformations() { // Сбросьте параметры трансформации
     translation[0] = 0.0f;
@@ -108,21 +108,21 @@ void show_create_custom_vec() {
     ImGui::Text("First point");
 
     ImGui::PushItemWidth(50);
-    ImGui::InputFloat("x1", &x.x);
+    ImGui::InputFloat("x1", &xInput.x);
     ImGui::SameLine();
-    ImGui::InputFloat("y1", &x.y);
+    ImGui::InputFloat("y1", &xInput.y);
     ImGui::SameLine();
-    ImGui::InputFloat("z1", &x.z);
+    ImGui::InputFloat("z1", &xInput.z);
     ImGui::PopItemWidth();
 
     ImGui::Text("Second point");
 
     ImGui::PushItemWidth(50);
-    ImGui::InputFloat("x2", &y.x);
+    ImGui::InputFloat("x2", &yInput.x);
     ImGui::SameLine();
-    ImGui::InputFloat("y2", &y.y);
+    ImGui::InputFloat("y2", &yInput.y);
     ImGui::SameLine();
-    ImGui::InputFloat("z2", &y.z);
+    ImGui::InputFloat("z2", &yInput.z);
     ImGui::PopItemWidth();
 
     if (ImGui::Button("Ok"))
@@ -143,16 +143,16 @@ Point3 calculateFigureCenter(const std::vector<Point3> &vertices) {
 
 void make_vec_rotation(Matrix4x4 &model) {
     if (axis == 3 && rotation_val[3] != 0.0f) {
-        Point3 vec = y - x;
+        Point3 vec = yInput - xInput;
         vec = vec.normalize();
 
         // Переведите модель так, чтобы точка x находилась в начале координат
-        Matrix4x4 translateToOrigin = Matrix4x4::translate(-x);
+        Matrix4x4 translateToOrigin = Matrix4x4::translate(-xInput);
 
         // Поверните модель вокруг вектора vec
         float angle = rotation_val[3] * M_PI / 180.0f;
         Matrix4x4 rotateAroundVector = Matrix4x4::rotation(angle, vec);
-        Matrix4x4 translateBack = Matrix4x4::translate(x);
+        Matrix4x4 translateBack = Matrix4x4::translate(xInput);
 
         // Применяем трансформации
         model = model * translateToOrigin * rotateAroundVector * translateBack;

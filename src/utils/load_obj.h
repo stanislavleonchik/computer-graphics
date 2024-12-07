@@ -33,7 +33,7 @@ Mesh loadOBJ(const std::string& path) {
             // Координаты текстур
             float u, v;
             ss >> u >> v;
-            temp_texcoords.push_back({u, v, 0.0f});
+            temp_texcoords.push_back({u, v});
         } else if (prefix == "vn") {
             // Нормали
             float x, y, z;
@@ -78,6 +78,7 @@ Mesh loadOBJ(const std::string& path) {
 
     // Устанавливаем вершины
     mesh.vertices = temp_vertices;
+    mesh.textureCoords = temp_texcoords;
 
     // Создание списка индексов для отрисовки линий
     mesh.faceIndices.clear();

@@ -38,6 +38,7 @@ add_executable(
 		src/models/Matrix4x4.h
 		src/utils/load_obj.h
 		src/utils/save_obj.h
+		src/main.cpp
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw glad)
