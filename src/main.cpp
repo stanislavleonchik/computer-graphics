@@ -28,10 +28,10 @@ Point3 cameraPos(0.0f, 0.0f, 3.0f);
 Point3 cameraFront(0.0f, 0.0f, -1.0f);
 Point3 cameraUp(0.0f, 1.0f, 0.0f);
 
-static Point3 camObjPos(-2.133f, -1.0f, 2.434f);
+static Point3 camObjPos(-2.133f, 1.0f, 2.434f);
 static Point3 camObjRot(0.0f, 0.0f, 0.0f);
 static float camObjScale = 0.1f;
-static float cameraRadius = 3.0f;
+static float cameraRadius = 7.0f;
 float angle = 0.0f;
 float angularSpeed = 1.0f;
 static bool CCTV = false;
