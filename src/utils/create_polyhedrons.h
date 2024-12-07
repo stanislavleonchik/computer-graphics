@@ -1,6 +1,4 @@
-﻿#ifndef CREATE_POLYH_H
-#define CREATE_POLYH_H
-
+﻿#pragma once
 #include"Mesh.h"
 
 Mesh createTetrahedron() { // Функция для создания тетраэдра
@@ -41,7 +39,6 @@ Mesh createTetrahedron() { // Функция для создания тетра�
 
     return mesh;
 }
-
 Mesh createHexahedron() { // Функция для создания гексаэдра (куба)
     Mesh mesh;
 
@@ -85,7 +82,6 @@ Mesh createHexahedron() { // Функция для создания гексаэ
 
     return mesh;
 }
-
 Mesh createOctahedron() { // Функция для создания октаэдра
     Mesh mesh;
 
@@ -129,7 +125,6 @@ Mesh createOctahedron() { // Функция для создания октаэд
 
     return mesh;
 }
-
 Mesh createIcosahedron() { // Функция для создания икосаэдра
     Mesh mesh;
     const float t = (1.0 + std::sqrt(5.0)) / 2.0;
@@ -180,7 +175,6 @@ Mesh createIcosahedron() { // Функция для создания икоса�
 
     return mesh;
 }
-
 Mesh createDodecahedron() { // Функция для создания додекаэдра
     Mesh mesh;
     const float phi = (1.0 + std::sqrt(5.0)) / 2.0;
@@ -249,6 +243,3 @@ Mesh createDodecahedron() { // Функция для создания додек
 
     return mesh;
 }
-
-
-#endif // !CREATE_POLYH_H

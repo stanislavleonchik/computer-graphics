@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "Mesh.h"
 #include "Matrix4x4.h"
 #include <cmath>
@@ -38,6 +39,67 @@ void reset_transformations() { // Сбросьте параметры транс
     rotation_val[1] = 0.0f;
     rotation_val[2] = 0.0f;
     rotation_val[3] = 0.0f;
+}
+
+struct cache {
+    static float cache_translation[3];
+    static float cache_rotation[3];
+    static float cache_scaling[3];
+    static bool cache_reflectXY;
+    static bool cache_reflectXZ;
+    static bool cache_reflectYZ;
+    static float cache_globalScale;
+    static float cache_rotation_val[4];
+};
+
+float cache::cache_translation[3] = {0.0f, 0.0f, 0.0f};
+float cache::cache_rotation[3] = {0.0f, 0.0f, 0.0f};
+float cache::cache_scaling[3] = {1.0f, 1.0f, 1.0f};
+bool cache::cache_reflectXY = false;
+bool cache::cache_reflectXZ = false;
+bool cache::cache_reflectYZ = false;
+float cache::cache_globalScale = 1.0f;
+float cache::cache_rotation_val[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+
+void cache_transformations() { // Сбросьте параметры трансформации
+    cache::cache_translation[0] = translation[0];
+    cache::cache_translation[1] = translation[1];
+    cache::cache_translation[2] = translation[2];
+    cache::cache_rotation[0] = rotation[0];
+    cache::cache_rotation[1] = rotation[1];
+    cache::cache_rotation[2] = rotation[2];
+    cache::cache_scaling[0] = scaling[0];
+    cache::cache_scaling[1] = scaling[1];
+    cache::cache_scaling[2] = scaling[2];
+    cache::cache_reflectXY = reflectXY;
+    cache::cache_reflectXZ = reflectXZ;
+    cache::cache_reflectYZ = reflectYZ;
+    cache::cache_globalScale = globalScale;
+    cache::cache_rotation_val[0] = rotation_val[0];
+    cache::cache_rotation_val[1] = rotation_val[1];
+    cache::cache_rotation_val[2] = rotation_val[2];
+    cache::cache_rotation_val[3] = rotation_val[3];
+}
+
+void uncache_transformations() {
+    translation[0] = cache::cache_translation[0];
+    translation[1] = cache::cache_translation[1];
+    translation[2] = cache::cache_translation[2];
+    rotation[0] = cache::cache_rotation[0];
+    rotation[1] = cache::cache_rotation[1];
+    rotation[2] = cache::cache_rotation[2];
+    scaling[0] = cache::cache_scaling[0];
+    scaling[1] = cache::cache_scaling[1];
+    scaling[2] = cache::cache_scaling[2];
+    reflectXY = cache::cache_reflectXY;
+    reflectXZ = cache::cache_reflectXZ;
+    reflectYZ = cache::cache_reflectYZ;
+    globalScale = cache::cache_globalScale;
+    rotation_val[0] = cache::cache_rotation_val[0];
+    rotation_val[1] = cache::cache_rotation_val[1];
+    rotation_val[2] = cache::cache_rotation_val[2];
+    rotation_val[3] = cache::cache_rotation_val[3];
 }
 
 void show_create_custom_vec() {
@@ -185,20 +247,22 @@ void create_affine_tools(bool &is_shown) {
     ImGui::Separator();
 
     ImGui::Text("Reflection"); // Отражение
-    if (ImGui::Checkbox("Reflect XY", &reflectXY)) {
+    if (ImGui::Checkbox("XY", &reflectXY)) {
         // Сбросьте другие отражения, если выбрано это.
         if (reflectXY) {
             reflectXZ = false;
             reflectYZ = false;
         }
     }
-    if (ImGui::Checkbox("Reflect XZ", &reflectXZ)) {
+    ImGui::SameLine();
+    if (ImGui::Checkbox("XZ", &reflectXZ)) {
         if (reflectXZ) {
             reflectXY = false;
             reflectYZ = false;
         }
     }
-    if (ImGui::Checkbox("Reflect YZ", &reflectYZ)) {
+    ImGui::SameLine();
+    if (ImGui::Checkbox("YZ", &reflectYZ)) {
         if (reflectYZ) {
             reflectXY = false;
             reflectXZ = false;
