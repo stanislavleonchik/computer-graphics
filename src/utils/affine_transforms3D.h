@@ -1,11 +1,8 @@
-﻿#ifndef AFFIEN_TRANS_3D_H
-#define AFFINE_TRANS_3D_H
-
+﻿#pragma once
 #include "Mesh.h"
 #include "Matrix4x4.h"
-
 #define _USE_MATH_DEFINES
-#include<math.h>
+#include <math.h>
 
 static float translation[3] = { 0.0f, 0.0f, 0.0f };
 static float rotation[3] = { 0.0f, 0.0f, 0.0f };
@@ -90,7 +87,7 @@ void make_vec_rotation(Matrix4x4& transforms)
     transforms = Matrix4x4::translate(x) * transforms;
 }
 
-void make_affine_transforms(Matrix4x4& model, Mesh mesh) {
+void make_affine_transforms(Matrix4x4& model) {
 
     figureCenter = calculateFigureCenter(mesh.vertices);
     
@@ -202,5 +199,3 @@ void create_affine_tools(bool& is_shown) {
     ImGui::End(); // Конец окна ImGui
     
 }
-
-#endif // !AFFIEN_TRANS_3D_H
