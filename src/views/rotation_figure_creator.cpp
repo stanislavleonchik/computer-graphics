@@ -177,8 +177,8 @@ Mesh generateRevolvedMesh(const Point3& axis, unsigned int np) {
     // Генерация полигонов
     for (size_t i = 0; i < np; i++) {
         for (size_t j = 0; j < points.size() - 1; j++) {
-            unsigned int current = i * points.size() + j;
-            unsigned int next = (i + 1) * points.size() + j;
+            int current = i * points.size() + j;
+            int next = (i + 1) * points.size() + j;
 
             // Формируем два треугольника на каждой паре соседних сегментов
             mesh.polygons.push_back({ { current, next, current + 1 } });

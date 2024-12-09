@@ -87,7 +87,7 @@ void make_vec_rotation(Matrix4x4& transforms)
     transforms = Matrix4x4::translate(x) * transforms;
 }
 
-void make_affine_transforms(Matrix4x4& model) {
+void make_affine_transforms(Matrix4x4& model, Mesh& mesh) {
 
     figureCenter = calculateFigureCenter(mesh.vertices);
     

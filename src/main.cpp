@@ -191,7 +191,8 @@ int main() {
         if (is_tools_shown) {
             create_affine_tools(is_tools_shown);
         }
-        make_affine_transforms(model);
+        make_affine_transforms(model, mesh);
+        make_affine_transforms(model, rf_figure);
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -265,7 +266,6 @@ int main() {
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, rf_figure);
         }
-        make_affine_transforms(model);
 
         Matrix4x4 projection;
         if (currentProjection == 0) {
