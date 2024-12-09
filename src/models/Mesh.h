@@ -39,6 +39,10 @@ struct Point3 { // Структура для представления точк
             return { x / len, y / len, z / len };
         return {};
     }
+
+    float abs() const {
+        return std::sqrt(x * x + y * y + z * z);
+    }
 };
 
 struct Polygon3 { // Структура полигона

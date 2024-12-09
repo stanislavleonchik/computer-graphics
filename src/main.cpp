@@ -12,6 +12,7 @@
 #include "Matrix4x4.h"
 #include "create_polyhedrons.h"
 #include "affine_transforms3D.h"
+#include "backface_calling.h"
 #include "rotation_figure_creator.h"
 
 GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
@@ -257,6 +258,7 @@ int main() {
 
     bool is_tools_shown = false;
     bool is_rf_creator_shown = false;
+    bool is_backface_calling = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
@@ -284,7 +286,7 @@ int main() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("View")) {
-                if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
+                if (ImGui::MenuItem("Affine tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
                 
                 if (ImGui::BeginMenu("Projection")) {
                     if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
@@ -297,6 +299,7 @@ int main() {
                 if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
                 if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
                 if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; currentPolyhedron = 5; rf_figure = Mesh(); }
+                if (ImGui::MenuItem("Back-face culling", NULL, is_backface_calling)) { is_backface_calling = !is_backface_calling; }
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
                     case 1: mesh = createHexahedron(); break;
@@ -327,6 +330,9 @@ int main() {
             rf_tools(is_rf_creator_shown, window, rf_figure);
         }
         make_affine_transforms(model, mesh);
+        if (is_backface_calling) {
+            backface_calling(mesh);
+        }
 
         Matrix4x4 projection;
         if (currentProjection == 0) {
@@ -346,6 +352,7 @@ int main() {
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
         Matrix4x4 mvp = model * projection * view; // Формирование общей матрицы MVP
+        
         ImGui::Render();
 
 
