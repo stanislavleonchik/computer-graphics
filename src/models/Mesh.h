@@ -1,5 +1,4 @@
-﻿#ifndef MESH_H
-#define MESH_H
+﻿#pragma once
 #include<vector>
 #include<cmath>
 
@@ -46,7 +45,17 @@ struct Point3 { // Структура для представления точк
 };
 
 struct Polygon3 { // Структура полигона
-    std::vector<unsigned> vertex_indices;
+    std::vector<int> vertex_indices;
+    std::vector<int> texture_indices;
+    std::vector<int> normal_indices;
+};
+
+struct TextureCoord {
+    float u, v, w;
+};
+
+struct VertexNormal {
+    float x, y, z;
 };
 
 struct Mesh { // Меш
@@ -54,5 +63,3 @@ struct Mesh { // Меш
     std::vector<Polygon3> polygons;
     std::vector<unsigned int> indices;
 }; // Индексы для отрисовки
-
-#endif // !MESH_H
