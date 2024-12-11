@@ -244,7 +244,7 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
         glfwGetWindowSize(window, &width, &height);
         for (auto& p : points) {
             p.x = (6.0f * static_cast<float>(p.x) / width) - 3.0f;
-            p.y = 3.0f - (6.0f * static_cast<float>(p.y) / height);
+            p.y = 2.0f - (4.0f * static_cast<float>(p.y) / height);
         }
         mesh = generateRevolvedMesh(axis, np);
         is_shown = false;
