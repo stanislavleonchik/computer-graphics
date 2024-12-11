@@ -11,6 +11,7 @@
 #include "Mesh.h"
 #include "Matrix4x4.h"
 #include "create_polyhedrons.h"
+#include "create_plot.h"
 #include "affine_transforms3D.h"
 #include "rotation_figure_creator.h"
 #include "load_obj.h"
@@ -97,6 +98,13 @@ int main() {
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
 
     Mesh mesh = createDodecahedron(); // Переменная для текущего меша
+    SurfaceParams params(
+        [](float x, float y) { return std::sin(x) * std::cos(y); }, // Функция z = sin(x) * cos(y)
+        -3.14f, 3.14f,                                            // Диапазон по x
+        -3.14f, 3.14f,                                            // Диапазон по y
+        50,                                                       // Разрешение
+        "Sine-Cosine Surface"                                     // Имя поверхности
+    );
     Mesh rf_figure;
 
     for (const auto& poly : mesh.polygons) { // Создание списка индексов
@@ -166,6 +174,7 @@ int main() {
     glDeleteShader(fragmentShader);
 
     bool is_tools_shown = true;
+    bool is_surface_tools_shown = false;
     bool is_rf_creator_shown = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
@@ -179,6 +188,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
 
         glfwPollEvents(); // Обработка событий
+
 
         processCursorToggle(window);
         processInput(window, nearPlaneDistance);
@@ -226,7 +236,8 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
-             
+                if (ImGui::MenuItem("Surface tools", NULL, is_surface_tools_shown)) { is_surface_tools_shown = !is_surface_tools_shown; }
+
                 if (ImGui::BeginMenu("Projection")) {
                     if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
                     if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
@@ -238,6 +249,8 @@ int main() {
                 if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
                 if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
                 if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; currentPolyhedron = 5; rf_figure = Mesh(); }
+
+                if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 6)) { currentPolyhedron = 6; }
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
                     case 1: mesh = createHexahedron(); break;
@@ -245,6 +258,13 @@ int main() {
                     case 3: mesh = createIcosahedron(); break;
                     case 4: mesh = createDodecahedron(); break;
                     case 5: mesh = rf_figure; break;
+
+                    case 6: mesh = createSurfaceSegment(params); break;
+                }
+                switch (currentPolyhedron) {
+                    case 0: mesh = createTetrahedron(); break;
+                    case 1: mesh = createHexahedron(); break;
+
                 }
 
                 if (!mesh.vertices.empty()) {
@@ -260,12 +280,21 @@ int main() {
             ImGui::EndMainMenuBar();
         }
 
-        if (is_tools_shown) {
-            create_affine_tools(is_tools_shown);
+        if (is_surface_tools_shown) {
+            create_surface_menu(is_surface_tools_shown, params, mesh);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
         }
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, rf_figure);
         }
+
+
+
+        make_affine_transforms(model, mesh);
 
         Matrix4x4 projection;
         if (currentProjection == 0) {
