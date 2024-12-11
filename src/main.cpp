@@ -11,6 +11,7 @@
 #include "Mesh.h"
 #include "Matrix4x4.h"
 #include "create_polyhedrons.h"
+#include "create_plot.h"
 #include "affine_transforms3D.h"
 
 GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
@@ -144,6 +145,8 @@ void setup_imgui(GLFWwindow* window) {
     io.Fonts->TexID = (void *)(intptr_t)tex;
 }
 
+
+
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
         return -1;
@@ -186,6 +189,13 @@ int main() {
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
 
     Mesh mesh = createDodecahedron(); // Переменная для текущего меша
+    SurfaceParams params(
+        [](float x, float y) { return std::sin(x) * std::cos(y); }, // Функция z = sin(x) * cos(y)
+        -3.14f, 3.14f,                                            // Диапазон по x
+        -3.14f, 3.14f,                                            // Диапазон по y
+        50,                                                       // Разрешение
+        "Sine-Cosine Surface"                                     // Имя поверхности
+    );
 
     for (const auto& poly : mesh.polygons) { // Создание списка индексов
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
@@ -254,6 +264,7 @@ int main() {
     glDeleteShader(fragmentShader);
 
     bool is_tools_shown = true;
+    bool is_surface_tools_shown = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
@@ -275,6 +286,7 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Clean")) {}
@@ -283,7 +295,8 @@ int main() {
             }
             if (ImGui::BeginMenu("View")) {
                 if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
-             
+                if (ImGui::MenuItem("Surface tools", NULL, is_surface_tools_shown)) { is_surface_tools_shown = !is_surface_tools_shown; }
+
                 if (ImGui::BeginMenu("Projection")) {
                     if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
                     if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
@@ -294,12 +307,14 @@ int main() {
                 if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
                 if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
                 if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
+                if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 5)) { currentPolyhedron = 5; }
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
                     case 1: mesh = createHexahedron(); break;
                     case 2: mesh = createOctahedron(); break;
                     case 3: mesh = createIcosahedron(); break;
                     case 4: mesh = createDodecahedron(); break;
+                    case 5: mesh = createSurfaceSegment(params); break;
                 }
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
@@ -317,10 +332,22 @@ int main() {
             ImGui::EndMainMenuBar();
         }
 
+        if (is_surface_tools_shown) {
+            create_surface_menu(is_surface_tools_shown, params, mesh);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+        }
+
         Matrix4x4 model;
         if (is_tools_shown) {
             create_affine_tools(is_tools_shown);
         }
+
+
+
         make_affine_transforms(model, mesh);
 
         Matrix4x4 projection;
@@ -356,6 +383,8 @@ int main() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData()); // Обновление окна
         glfwSwapBuffers(window);
     }
+
+
 
     glDeleteVertexArrays(1, &VAO); // Очистка ресурсов
     glDeleteBuffers(1, &VBO);
