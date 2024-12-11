@@ -1,5 +1,4 @@
-﻿#ifndef MATRIX4X4_H
-#define MATRIX4X4_H
+﻿#pragma once
 
 struct Matrix4x4 { // Матрица 4x4 для трансформаций
     float m[4][4]{};
@@ -181,6 +180,3 @@ struct Matrix4x4 { // Матрица 4x4 для трансформаций
         return result;
     }
 };
-
-
-#endif // !MATRIX4X4_H

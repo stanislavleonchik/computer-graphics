@@ -13,22 +13,11 @@
 #include "create_polyhedrons.h"
 #include "create_plot.h"
 #include "affine_transforms3D.h"
+#include "rotation_figure_creator.h"
+#include "load_obj.h"
+#include "save_obj.h"
 
-GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
-    GLuint shader = glCreateShader(type);
-    const char* src_cstr = source.c_str();
-    glShaderSource(shader, 1, &src_cstr, nullptr);
-    glCompileShader(shader);
-
-    GLint success; // Проверка на ошибки компиляции
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Ошибка компиляции шейдера: " << infoLog << std::endl;
-    }
-    return shader;
-}
+GLuint CompileShader(GLenum type, const std::string& source);
 
 double lastX, lastY; // Глобальные переменные для управления камерой
 float yaw = -90.0f;
@@ -39,113 +28,28 @@ Point3 cameraPos(0.0f, 0.0f, 3.0f);
 Point3 cameraFront(0.0f, 0.0f, -1.0f);
 Point3 cameraUp(0.0f, 1.0f, 0.0f);
 
-void processInput(GLFWwindow* window, float& nearPlaneDistance) {
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        nearPlaneDistance += 0.02f; // Увеличиваем ближнюю плоскость при движении вперёд
-        if (nearPlaneDistance > 99.0f) nearPlaneDistance = 99.0f; // Ограничение для дальности
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        nearPlaneDistance -= 0.02f; // Уменьшаем ближнюю плоскость при движении назад
-        if (nearPlaneDistance < -10.0f) nearPlaneDistance = -10.0f; // Ограничение для близости
-    }
-}
+std::string modelFilePath = "";
 
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
+void processInput(GLFWwindow* window, float& nearPlaneDistance);
 
-    auto xoffset = static_cast<float>(xpos - lastX);
-    auto yoffset = static_cast<float>(lastY - ypos);
-    lastX = xpos;
-    lastY = ypos;
-
-    float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f) // Ограничение угла обзора по вертикали
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    Point3 front; // Обновление направления камеры
-    front.x = std::cos(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
-    front.y = std::sin(pitch * M_PI / 180.0f);
-    front.z = std::sin(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
-    cameraFront = front.normalize();
-}
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 bool pressed = false;
-void processCursorToggle(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS) {
-        if (!pressed) {
-            pressed = true;
-            glfwSetCursorPosCallback(window, mouse_callback);
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        }
-    } else {
-        if (pressed) {
-            pressed = false;
-            glfwSetCursorPosCallback(window, nullptr);
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        }
-    }
-}
+void processCursorToggle(GLFWwindow* window);
 
-void setup_style(ImGuiStyle& style, ImGuiIO& io) {
-    style.FrameRounding = 12.0f;
-    style.FrameBorderSize = 1.0f;
-    style.WindowRounding = 6.0f;
-    style.ScrollbarRounding = 6.0f;
-    style.GrabRounding = 6.0f;
-    style.PopupRounding = 6.0f;
-    style.ChildRounding = 6.0f;
-    style.WindowPadding = ImVec2(15, 15);
-    style.FramePadding = ImVec2(10, 6);
-    style.ItemSpacing = ImVec2(10, 10);
-    ImVec4 buttonColor = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
-    ImVec4 buttonHoveredColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
-    ImVec4 buttonActiveColor = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
-    ImVec4 borderColor = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
-    ImVec4 shadowColor = ImVec4(0.0f, 0.0f, 0.0f, 0.2f);
-    style.Colors[ImGuiCol_Button] = buttonColor;
-    style.Colors[ImGuiCol_ButtonHovered] = buttonHoveredColor;
-    style.Colors[ImGuiCol_ButtonActive] = buttonActiveColor;
-    style.Colors[ImGuiCol_Border] = borderColor;
-    style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-}
+void setup_style(ImGuiStyle& style, ImGuiIO& io);
 
-void setup_imgui(GLFWwindow* window) {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    setup_style(ImGui::GetStyle(), io);
+void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
 
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 410");
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
-    io.Fonts->AddFontFromFileTTF("../assets/helvetica_regular.otf", 16.0f);
-    io.FontDefault = io.Fonts->Fonts.back();
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
-    unsigned char* tex_pixels = nullptr;
-    int tex_width, tex_height;
-    io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_width, tex_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_pixels);
-    io.Fonts->TexID = (void *)(intptr_t)tex;
-}
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
+void char_callback(GLFWwindow* window, unsigned int codepoint);
 
+void setup_imgui(GLFWwindow* window);
 
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
@@ -181,6 +85,11 @@ int main() {
     }
 
     setup_imgui(window);
+    glfwSetCursorPosCallback(window, cursor_pos_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetCharCallback(window, char_callback);
     int screenWidth, screenHeight; // Задание размера окна просмотра
     float nearPlaneDistance = 0.7f;
     glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
@@ -196,6 +105,7 @@ int main() {
         50,                                                       // Разрешение
         "Sine-Cosine Surface"                                     // Имя поверхности
     );
+    Mesh rf_figure;
 
     for (const auto& poly : mesh.polygons) { // Создание списка индексов
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
@@ -240,8 +150,8 @@ int main() {
         out vec4 FragColor;
 
         void main() {
-            FragColor = vec4(1.0);
-        } // Белый цвет
+    FragColor = vec4(gl_FragCoord.x / 3000.0, gl_FragCoord.y / 1500.0, gl_FragCoord.y / 1500.0, 1.0);
+}
     )";
 
     GLuint vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource);
@@ -265,6 +175,7 @@ int main() {
 
     bool is_tools_shown = true;
     bool is_surface_tools_shown = false;
+    bool is_rf_creator_shown = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
@@ -286,11 +197,41 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        Matrix4x4 model;
+        if (is_tools_shown) {
+            create_affine_tools(is_tools_shown);
+        }
+        make_affine_transforms(model, mesh);
+        make_affine_transforms(model, rf_figure);
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Clean")) {}
-                if (ImGui::MenuItem("Save")) {}
+                if (ImGui::MenuItem("Save")) {
+                    /*
+                    /Users/controldata/GitHub/computer-graphics/src/models/saved_mesh.obj
+                    */
+                    std::string savePath;
+                    std::cin >> savePath;
+                    Mesh transformedMesh = mesh;
+                    for (auto& vertex : transformedMesh.vertices) {
+                        vertex = model * vertex;
+                    }
+                    saveOBJ(transformedMesh, savePath);
+                    std::cout << "Модель сохранена в файл: " << savePath << std::endl;
+                }
+                if (ImGui::MenuItem("Load Model")) {
+                    reset_transformations();
+                    /*
+                    /Users/controldata/Downloads/utah_teapot_lowpoly.obj
+                    */
+                    std::cin >> modelFilePath;
+                    mesh = loadOBJ(modelFilePath);
+                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("View")) {
@@ -308,6 +249,7 @@ int main() {
                 if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
                 if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
                 if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 5)) { currentPolyhedron = 5; }
+                if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; currentPolyhedron = 5; rf_figure = Mesh(); }
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
                     case 1: mesh = createHexahedron(); break;
@@ -315,17 +257,20 @@ int main() {
                     case 3: mesh = createIcosahedron(); break;
                     case 4: mesh = createDodecahedron(); break;
                     case 5: mesh = createSurfaceSegment(params); break;
-                }
+                }   case 6: mesh = rf_figure; break;
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
                     case 1: mesh = createHexahedron(); break;
+
                 }
 
-                glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+                if (!mesh.vertices.empty()) {
+                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
 
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                }
 
                 ImGui::EndMenu();
             }
@@ -344,6 +289,9 @@ int main() {
         Matrix4x4 model;
         if (is_tools_shown) {
             create_affine_tools(is_tools_shown);
+        }
+        if (is_rf_creator_shown) {
+            rf_tools(is_rf_creator_shown, window, rf_figure);
         }
 
 
@@ -384,12 +332,147 @@ int main() {
         glfwSwapBuffers(window);
     }
 
-
-
     glDeleteVertexArrays(1, &VAO); // Очистка ресурсов
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
 
     glfwTerminate();
     return 0;
+}
+
+GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
+    GLuint shader = glCreateShader(type);
+    const char* src_cstr = source.c_str();
+    glShaderSource(shader, 1, &src_cstr, nullptr);
+    glCompileShader(shader);
+
+    GLint success; // Проверка на ошибки компиляции
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+        std::cerr << "Ошибка компиляции шейдера: " << infoLog << std::endl;
+    }
+    return shader;
+}
+void processInput(GLFWwindow* window, float& nearPlaneDistance) {
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        nearPlaneDistance += 0.02f; // Увеличиваем ближнюю плоскость при движении вперёд
+        if (nearPlaneDistance > 99.0f) nearPlaneDistance = 99.0f; // Ограничение для дальности
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        nearPlaneDistance -= 0.02f; // Уменьшаем ближнюю плоскость при движении назад
+        if (nearPlaneDistance < -10.0f) nearPlaneDistance = -10.0f; // Ограничение для близости
+    }
+}
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    auto xoffset = static_cast<float>(xpos - lastX);
+    auto yoffset = static_cast<float>(lastY - ypos);
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if (pitch > 89.0f) // Ограничение угла обзора по вертикали
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    Point3 front; // Обновление направления камеры
+    front.x = std::cos(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
+    front.y = std::sin(pitch * M_PI / 180.0f);
+    front.z = std::sin(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
+    cameraFront = front.normalize();
+    Point3 worldUp(0.0f, 1.0f, 0.0f);
+    Point3 cameraRight = cameraFront.cross(worldUp).normalize();
+    cameraUp = cameraRight.cross(cameraFront).normalize();
+}
+void processCursorToggle(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS) {
+        if (!pressed) {
+            pressed = true;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+    } else {
+        if (pressed) {
+            pressed = false;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    }
+}
+void setup_style(ImGuiStyle& style, ImGuiIO& io) {
+    style.FrameRounding = 12.0f;
+    style.FrameBorderSize = 1.0f;
+    style.WindowRounding = 6.0f;
+    style.ScrollbarRounding = 6.0f;
+    style.GrabRounding = 6.0f;
+    style.PopupRounding = 6.0f;
+    style.ChildRounding = 6.0f;
+    style.WindowPadding = ImVec2(15, 15);
+    style.FramePadding = ImVec2(10, 6);
+    style.ItemSpacing = ImVec2(10, 10);
+    ImVec4 buttonColor = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
+    ImVec4 buttonHoveredColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+    ImVec4 buttonActiveColor = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+    ImVec4 borderColor = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
+    ImVec4 shadowColor = ImVec4(0.0f, 0.0f, 0.0f, 0.2f);
+    style.Colors[ImGuiCol_Button] = buttonColor;
+    style.Colors[ImGuiCol_ButtonHovered] = buttonHoveredColor;
+    style.Colors[ImGuiCol_ButtonActive] = buttonActiveColor;
+    style.Colors[ImGuiCol_Border] = borderColor;
+    style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+}
+void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
+        mouse_callback(window, xpos, ypos);
+    }
+    // Передача события в ImGui
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+}
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+}
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+}
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+}
+void char_callback(GLFWwindow* window, unsigned int codepoint) {
+    ImGui_ImplGlfw_CharCallback(window, codepoint);
+}
+void setup_imgui(GLFWwindow* window) {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    setup_style(ImGui::GetStyle(), io);
+
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, false);
+    ImGui_ImplOpenGL3_Init("#version 410");
+
+    io.Fonts->AddFontFromFileTTF("../assets/helvetica_regular.otf", 16.0f);
+    io.FontDefault = io.Fonts->Fonts.back();
+
+    unsigned char* tex_pixels = nullptr;
+    int tex_width, tex_height;
+    io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_width, tex_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_pixels);
+    io.Fonts->TexID = (void *)(intptr_t)tex;
 }
