@@ -288,9 +288,6 @@ int main() {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
         }
-        if (is_tools_shown) {
-            create_affine_tools(is_tools_shown);
-        }
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, rf_figure);
         }
