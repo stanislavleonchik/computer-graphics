@@ -68,19 +68,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void char_callback(GLFWwindow* window, unsigned int codepoint);
 void setup_imgui(GLFWwindow* window);
 void show_camera_object_tools(bool& is_camera_tools_shown);
-void ModelsView(Mesh& mesh, int& meshNum) {
-    if (ImGui::MenuItem("Tetrahedron", NULL, meshNum == 0)) { meshNum = 0; mesh = loadOBJ("../assets/tetrahedron.obj"); }
-    if (ImGui::MenuItem("Hexahedron", NULL, meshNum == 1)) { meshNum = 1; mesh = loadOBJ("../assets/diamond.obj"); }
-    if (ImGui::MenuItem("Octahedron", NULL, meshNum == 2)) { meshNum = 2; mesh = loadOBJ("../assets/octahedron.obj"); }
-    if (ImGui::MenuItem("Icosahedron", NULL, meshNum == 3)) { meshNum = 3; mesh = loadOBJ("../assets/icosahedron.obj"); }
-    if (ImGui::MenuItem("Dodecahedron", NULL, meshNum == 4)) { meshNum = 4; mesh = loadOBJ("../assets/dodecahedron.obj"); }
-    if (ImGui::MenuItem("Teapot", NULL, meshNum == 5)) { meshNum = 5; mesh = loadOBJ("../assets/utah_teapot_lowpoly.obj"); }
-    if (ImGui::MenuItem("Cube", NULL, meshNum == 6)) { meshNum = 6; mesh = loadOBJ("../assets/cube.obj"); }
-    if (ImGui::MenuItem("Sphere", NULL, meshNum == 7)) { meshNum = 7; mesh = loadOBJ("../assets/sphere.obj"); }
-    if (ImGui::MenuItem("Shuttle", NULL, meshNum == 8)) { meshNum = 8; mesh = loadOBJ("../assets/shuttle.obj"); }
-    if (ImGui::MenuItem("USS Enterprise", NULL, meshNum == 9)) { meshNum = 9; mesh = loadOBJ("../assets/ussenterprise.obj"); }
-    if (ImGui::MenuItem("Soul", NULL, meshNum == 10)) { meshNum = 10; mesh = loadOBJ("../assets/soul.obj"); }
-}
+void ModelsView(Mesh& mesh, int& meshNum);
+void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh);
 
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
@@ -328,17 +317,7 @@ void main() {
 
                 if (!mesh.vertices.empty()) {
                     mesh.init_edges_faces();
-                    /// Update VBO (vertex buffer)
-                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-                    /// Update faceEBO
-                    glBindVertexArray(faceVAO);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
-                    /// Update edgeEBO
-                    glBindVertexArray(edgeVAO);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
+                    updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
                 }
                 ImGui::EndMenu();
             }
@@ -355,29 +334,11 @@ void main() {
 
         if (is_surface_tools_shown) {
             create_surface_menu(is_surface_tools_shown, params, mesh);
-            glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-            /// Update faceEBO
-            glBindVertexArray(faceVAO);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
-            /// Update edgeEBO
-            glBindVertexArray(edgeVAO);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
+            updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
         }
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, mesh);
-            glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-            /// Update faceEBO
-            glBindVertexArray(faceVAO);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
-            /// Update edgeEBO
-            glBindVertexArray(edgeVAO);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
+            updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
         }
 
         make_affine_transforms(model, mesh);
@@ -411,7 +372,7 @@ void main() {
 
             mvp = projection * view * model;
         } else {
-            mvp = projection * view * model; // Правильный порядок умножения матриц
+            mvp = projection * view * model;
         }
 
         ImGui::Render();
@@ -475,6 +436,7 @@ void main() {
     glfwTerminate();
     return 0;
 }
+
 GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
     GLuint shader = glCreateShader(type);
     const char* src_cstr = source.c_str();
@@ -489,6 +451,31 @@ GLuint CompileShader(GLenum type, const std::string& source) { // Функция
         std::cerr << "Ошибка компиляции шейдера: " << infoLog << std::endl;
     }
     return shader;
+}
+void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh) {
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+    /// Update faceEBO
+    glBindVertexArray(faceVAO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+    /// Update edgeEBO
+    glBindVertexArray(edgeVAO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
+}
+void ModelsView(Mesh& mesh, int& meshNum) {
+    if (ImGui::MenuItem("Tetrahedron", NULL, meshNum == 0)) { meshNum = 0; mesh = loadOBJ("../assets/tetrahedron.obj"); }
+    if (ImGui::MenuItem("Hexahedron", NULL, meshNum == 1)) { meshNum = 1; mesh = loadOBJ("../assets/diamond.obj"); }
+    if (ImGui::MenuItem("Octahedron", NULL, meshNum == 2)) { meshNum = 2; mesh = loadOBJ("../assets/octahedron.obj"); }
+    if (ImGui::MenuItem("Icosahedron", NULL, meshNum == 3)) { meshNum = 3; mesh = loadOBJ("../assets/icosahedron.obj"); }
+    if (ImGui::MenuItem("Dodecahedron", NULL, meshNum == 4)) { meshNum = 4; mesh = loadOBJ("../assets/dodecahedron.obj"); }
+    if (ImGui::MenuItem("Teapot", NULL, meshNum == 5)) { meshNum = 5; mesh = loadOBJ("../assets/utah_teapot_lowpoly.obj"); }
+    if (ImGui::MenuItem("Cube", NULL, meshNum == 6)) { meshNum = 6; mesh = loadOBJ("../assets/cube.obj"); }
+    if (ImGui::MenuItem("Sphere", NULL, meshNum == 7)) { meshNum = 7; mesh = loadOBJ("../assets/sphere.obj"); }
+    if (ImGui::MenuItem("Shuttle", NULL, meshNum == 8)) { meshNum = 8; mesh = loadOBJ("../assets/shuttle.obj"); }
+    if (ImGui::MenuItem("USS Enterprise", NULL, meshNum == 9)) { meshNum = 9; mesh = loadOBJ("../assets/ussenterprise.obj"); }
+    if (ImGui::MenuItem("Soul", NULL, meshNum == 10)) { meshNum = 10; mesh = loadOBJ("../assets/soul.obj"); }
 }
 void show_camera_object_tools(bool& is_camera_tools_shown) {
     if (!is_camera_tools_shown) return;
