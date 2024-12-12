@@ -48,7 +48,6 @@ void updateCameraPosition(float deltaTime) {
     // Центр взгляда остаётся в начале координат
     camObjRot.y = -cameraPos.normalize().y;
 }
-
 void updateCameraFront() {
     Point3 center(0.0f, 0.0f, 0.0f); // Центр координат
     Point3 direction = center - Point3(camObjPos.x, camObjPos.y, camObjPos.z); // Вектор направления
@@ -58,29 +57,30 @@ void updateCameraFront() {
     camObjRot.y = (std::atan2(normalizedDirection.x, normalizedDirection.z) - 90.0f) * 180.0f / M_PI; // Угол вокруг оси Y
 
 }
-
 void processInput(GLFWwindow* window);
-
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-
 void processCursorToggle(GLFWwindow* window);
-
 void setup_style(ImGuiStyle& style, ImGuiIO& io);
-
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
-
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-
 void char_callback(GLFWwindow* window, unsigned int codepoint);
-
 void setup_imgui(GLFWwindow* window);
-
 void show_camera_object_tools(bool& is_camera_tools_shown);
-
+void ModelsView(Mesh& mesh, int& meshNum) {
+    if (ImGui::MenuItem("Tetrahedron", NULL, meshNum == 0)) { meshNum = 0; mesh = loadOBJ("../assets/tetrahedron.obj"); }
+    if (ImGui::MenuItem("Hexahedron", NULL, meshNum == 1)) { meshNum = 1; mesh = loadOBJ("../assets/diamond.obj"); }
+    if (ImGui::MenuItem("Octahedron", NULL, meshNum == 2)) { meshNum = 2; mesh = loadOBJ("../assets/octahedron.obj"); }
+    if (ImGui::MenuItem("Icosahedron", NULL, meshNum == 3)) { meshNum = 3; mesh = loadOBJ("../assets/icosahedron.obj"); }
+    if (ImGui::MenuItem("Dodecahedron", NULL, meshNum == 4)) { meshNum = 4; mesh = loadOBJ("../assets/dodecahedron.obj"); }
+    if (ImGui::MenuItem("Teapot", NULL, meshNum == 5)) { meshNum = 5; mesh = loadOBJ("../assets/utah_teapot_lowpoly.obj"); }
+    if (ImGui::MenuItem("Cube", NULL, meshNum == 6)) { meshNum = 6; mesh = loadOBJ("../assets/cube.obj"); }
+    if (ImGui::MenuItem("Sphere", NULL, meshNum == 7)) { meshNum = 7; mesh = loadOBJ("../assets/sphere.obj"); }
+    if (ImGui::MenuItem("Shuttle", NULL, meshNum == 8)) { meshNum = 8; mesh = loadOBJ("../assets/shuttle.obj"); }
+    if (ImGui::MenuItem("USS Enterprise", NULL, meshNum == 9)) { meshNum = 9; mesh = loadOBJ("../assets/ussenterprise.obj"); }
+    if (ImGui::MenuItem("Soul", NULL, meshNum == 10)) { meshNum = 10; mesh = loadOBJ("../assets/soul.obj"); }
+}
 
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
@@ -130,19 +130,9 @@ int main() {
 
     Mesh mesh = loadOBJ("../assets/dodecahedron.obj");
     Mesh cameraMesh = loadOBJ("../assets/camera.obj");
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.edgeIndices.push_back(idx0);
-            mesh.edgeIndices.push_back(idx1);
-        }
-        for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
-            mesh.faceIndices.push_back(poly.vertex_indices[0]);
-            mesh.faceIndices.push_back(poly.vertex_indices[i]);
-            mesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
-        }
-    }
+    mesh.init_edges_faces();
+    cameraMesh.init_edges_faces();
+
     SurfaceParams params(
         [](float x, float y) { return std::sin(x) * std::cos(y); }, // Функция z = sin(x) * cos(y)
         -3.14f, 3.14f,                                            // Диапазон по x
@@ -150,21 +140,6 @@ int main() {
         50,                                                       // Разрешение
         "Sine-Cosine Surface"                                     // Имя поверхности
     );
-    Mesh rf_figure;
-
-    for (const auto& poly : cameraMesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            cameraMesh.edgeIndices.push_back(idx0);
-            cameraMesh.edgeIndices.push_back(idx1);
-        }
-        for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
-            cameraMesh.faceIndices.push_back(poly.vertex_indices[0]);
-            cameraMesh.faceIndices.push_back(poly.vertex_indices[i]);
-            cameraMesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
-        }
-    }
 
     GLuint VBO;
     GLuint faceVAO, faceEBO;
@@ -176,7 +151,7 @@ int main() {
     glGenBuffers(1, &faceEBO);
     glGenBuffers(1, &edgeEBO);
 
-// Set up face VAO
+    // Set up face VAO
     glBindVertexArray(faceVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
@@ -185,7 +160,7 @@ int main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
-// Set up edge VAO
+    // Set up edge VAO
     glBindVertexArray(edgeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // VBO is already filled
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
@@ -272,8 +247,9 @@ void main() {
     bool is_camera_tools_shown = true;
     bool is_surface_tools_shown = false;
     bool is_rf_creator_shown = false;
-    static int currentPolyhedron = 4;
+    static int meshNum = 4;
     bool CCTVStandby = true;
+    bool isFacesShown = true;
 
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP");
@@ -310,7 +286,6 @@ void main() {
 
         make_affine_transforms(model, mesh);
         make_affine_transforms(cameraModel, cameraMesh);
-        make_affine_transforms(model, rf_figure);
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         static auto lastTime = currentTime;
@@ -343,67 +318,24 @@ void main() {
                     mesh = loadOBJ(modelFilePath);
                     glBindBuffer(GL_ARRAY_BUFFER, VBO);
                     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Model")) {
-                if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { currentPolyhedron = 0; }
-                if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { currentPolyhedron = 1; }
-                if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
-                if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
-                if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
-                if (ImGui::MenuItem("Teapot", NULL, currentPolyhedron == 5)) { currentPolyhedron = 5; }
-                if (ImGui::MenuItem("Cube", NULL, currentPolyhedron == 6)) { currentPolyhedron = 6; }
-                if (ImGui::MenuItem("Sphere", NULL, currentPolyhedron == 7)) { currentPolyhedron = 7; }
-                if (ImGui::MenuItem("Shuttle", NULL, currentPolyhedron == 8)) { currentPolyhedron = 8; }
-                if (ImGui::MenuItem("USS Enterprise", NULL, currentPolyhedron == 9)) { currentPolyhedron = 9; }
-                if (ImGui::MenuItem("Soul", NULL, currentPolyhedron == 10)) { currentPolyhedron = 10; }
-                if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; currentPolyhedron = 11; rf_figure = Mesh(); }
-                if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 12)) { currentPolyhedron = 12; }
-                switch (currentPolyhedron) {
-                    case 0: mesh = loadOBJ("../assets/tetrahedron.obj"); break;
-                    case 1: mesh = loadOBJ("../assets/diamond.obj"); break;
-                    case 2: mesh = loadOBJ("../assets/octahedron.obj"); break;
-                    case 3: mesh = loadOBJ("../assets/icosahedron.obj"); break;
-                    case 4: mesh = loadOBJ("../assets/dodecahedron.obj"); break;
-                    case 5: mesh = loadOBJ("../assets/utah_teapot_lowpoly.obj"); break;
-                    case 6: mesh = loadOBJ("../assets/cube.obj"); break;
-                    case 7: mesh = loadOBJ("../assets/sphere.obj"); break;
-                    case 8: mesh = loadOBJ("../assets/shuttle.obj"); break;
-                    case 9: mesh = loadOBJ("../assets/ussenterprise.obj"); break;
-                    case 10: mesh = loadOBJ("../assets/soul.obj"); break;
-                    case 11: mesh = rf_figure; break;
-                    case 12: mesh = createSurfaceSegment(params); break;
-                }
+                ModelsView(mesh, meshNum);
 
-                mesh.faceIndices.clear();
-                mesh.edgeIndices.clear();
-                for (const auto& poly : mesh.polygons) {
-                    for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-                        int idx0 = poly.vertex_indices[i];
-                        int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-                        mesh.edgeIndices.push_back(idx0);
-                        mesh.edgeIndices.push_back(idx1);
-                    }
-                    for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
-                        mesh.faceIndices.push_back(poly.vertex_indices[0]);
-                        mesh.faceIndices.push_back(poly.vertex_indices[i]);
-                        mesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
-                    }
-                }
                 if (!mesh.vertices.empty()) {
-                    // Update VBO (vertex buffer)
+                    mesh.init_edges_faces();
+                    /// Update VBO (vertex buffer)
                     glBindBuffer(GL_ARRAY_BUFFER, VBO);
                     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
-                    // Update faceEBO
+                    /// Update faceEBO
                     glBindVertexArray(faceVAO);
                     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
                     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
-
-                    // Update edgeEBO
+                    /// Update edgeEBO
                     glBindVertexArray(edgeVAO);
                     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
                     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
@@ -413,9 +345,11 @@ void main() {
             if (ImGui::MenuItem("Show Tools", NULL, is_tools_shown == 1)) { is_tools_shown = !is_tools_shown; }
             if (ImGui::MenuItem("Camera", NULL, is_camera_shown == 1)) { is_camera_shown = !is_camera_shown; }
             if (ImGui::MenuItem("Camera Tools", NULL, is_camera_tools_shown == 1)) { is_camera_tools_shown = !is_camera_tools_shown; }
-            if (ImGui::MenuItem("Surface tools", NULL, is_surface_tools_shown)) { is_surface_tools_shown = !is_surface_tools_shown; }
+            if (ImGui::MenuItem("Surface Tools", NULL, is_surface_tools_shown)) { is_surface_tools_shown = !is_surface_tools_shown; }
+            if (ImGui::MenuItem("Rotation figure", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; }
             if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
             if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
+            if (ImGui::MenuItem("Show Faces", NULL, isFacesShown)) { isFacesShown = !isFacesShown; }
             ImGui::EndMainMenuBar();
         }
 
@@ -423,15 +357,28 @@ void main() {
             create_surface_menu(is_surface_tools_shown, params, mesh);
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
             glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+            /// Update faceEBO
+            glBindVertexArray(faceVAO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+            /// Update edgeEBO
+            glBindVertexArray(edgeVAO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
         }
         if (is_rf_creator_shown) {
-            rf_tools(is_rf_creator_shown, window, rf_figure);
+            rf_tools(is_rf_creator_shown, window, mesh);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+            /// Update faceEBO
+            glBindVertexArray(faceVAO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+            /// Update edgeEBO
+            glBindVertexArray(edgeVAO);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
         }
-
-
 
         make_affine_transforms(model, mesh);
 
@@ -453,14 +400,6 @@ void main() {
 
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-        // Матрица для объекта камеры
-        // Применим трансформации, заданные в camObjPos, camObjRot, camObjScale
-        cameraModel = cameraModel * Matrix4x4::translate(Point3(camObjPos.x, camObjPos.y, camObjPos.z));
-        cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.x * M_PI/180.0f, Point3(1,0,0));
-        cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.y * M_PI/180.0f, Point3(0,1,0));
-        cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.z * M_PI/180.0f, Point3(0,0,1));
-        cameraModel = cameraModel * Matrix4x4::scale(Point3(camObjScale, camObjScale, camObjScale));
-
         Matrix4x4 mvp;
         if (CCTV) {
             projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f);
@@ -479,23 +418,31 @@ void main() {
 
         glUseProgram(shaderProgram);
 
-        // Set the MVP matrix
+        /// Set the MVP matrix
         glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
 
-        // --- Draw Faces with Gradient Color ---
-        glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
-        glBindVertexArray(faceVAO);
-        glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-
-        // --- Draw Edges in White Color ---
-        glUniform1i(useUniformColorLoc, GL_TRUE); // Use uniform color
+        /// Draw Faces with Gradient Color
+        if (isFacesShown) {
+            glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
+            glBindVertexArray(faceVAO);
+            glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
+        }
+        /// Draw Edges in White Color
+        glUniform1i(useUniformColorLoc, isFacesShown); // Use uniform color
         glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 1.0f); // Set color to white
         glBindVertexArray(edgeVAO);
         glDrawElements(GL_LINES, mesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
         if (is_camera_shown) {
+            // Матрица для объекта камеры
+            // Применим трансформации, заданные в camObjPos, camObjRot, camObjScale
+            cameraModel = cameraModel * Matrix4x4::translate(Point3(camObjPos.x, camObjPos.y, camObjPos.z));
+            cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.x * M_PI/180.0f, Point3(1,0,0));
+            cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.y * M_PI/180.0f, Point3(0,1,0));
+            cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.z * M_PI/180.0f, Point3(0,0,1));
+            cameraModel = cameraModel * Matrix4x4::scale(Point3(camObjScale, camObjScale, camObjScale));
             // Вычисляем MVP для объекта-камеры
             Matrix4x4 cameraObjMVP = projection * view * cameraModel;
             glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, cameraObjMVP.m);
@@ -528,7 +475,21 @@ void main() {
     glfwTerminate();
     return 0;
 }
+GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
+    GLuint shader = glCreateShader(type);
+    const char* src_cstr = source.c_str();
+    glShaderSource(shader, 1, &src_cstr, nullptr);
+    glCompileShader(shader);
 
+    GLint success; // Проверка на ошибки компиляции
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+        std::cerr << "Ошибка компиляции шейдера: " << infoLog << std::endl;
+    }
+    return shader;
+}
 void show_camera_object_tools(bool& is_camera_tools_shown) {
     if (!is_camera_tools_shown) return;
     ImGui::Begin("Camera Object Tools", &is_camera_tools_shown);
@@ -554,23 +515,6 @@ void show_camera_object_tools(bool& is_camera_tools_shown) {
     if (ImGui::Checkbox("Watch through CCTV", &CCTV)) {}
     ImGui::End();
 }
-
-GLuint CompileShader(GLenum type, const std::string& source) { // Функция компиляции шейдера
-    GLuint shader = glCreateShader(type);
-    const char* src_cstr = source.c_str();
-    glShaderSource(shader, 1, &src_cstr, nullptr);
-    glCompileShader(shader);
-
-    GLint success; // Проверка на ошибки компиляции
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Ошибка компиляции шейдера: " << infoLog << std::endl;
-    }
-    return shader;
-}
-
 static bool is_pressed = false;
 void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -611,7 +555,6 @@ void processInput(GLFWwindow* window) {
     }
 
 }
-
 void processCursorToggle(GLFWwindow* window) {
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         if (!pressed) {
@@ -626,7 +569,6 @@ void processCursorToggle(GLFWwindow* window) {
         }
     }
 }
-
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         if (firstMouse) {

@@ -61,4 +61,22 @@ struct Mesh {
     std::vector<TextureCoord> textureCoords;
     std::vector<unsigned int> faceIndices; // Indices for drawing faces
     std::vector<unsigned int> edgeIndices; // Indices for drawing edges
+
+    void init_edges_faces() {
+        faceIndices.clear();
+        edgeIndices.clear();
+        for (const auto& poly : polygons) {
+            for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
+                int idx0 = poly.vertex_indices[i];
+                int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
+                edgeIndices.push_back(idx0);
+                edgeIndices.push_back(idx1);
+            }
+            for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
+                faceIndices.push_back(poly.vertex_indices[0]);
+                faceIndices.push_back(poly.vertex_indices[i]);
+                faceIndices.push_back(poly.vertex_indices[i + 1]);
+            }
+        }
+    }
 };

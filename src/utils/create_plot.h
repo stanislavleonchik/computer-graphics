@@ -1,10 +1,4 @@
-//
-// Created by Ly4aznik on 03.12.2024.
-//
-
-#ifndef CREATE_PLOT_H
-#define CREATE_PLOT_H
-
+#pragma once
 #include "Mesh.h"
 #include <functional> // Для передачи функции f(x, y)
 
@@ -59,15 +53,7 @@ Mesh createSurfaceSegment(const SurfaceParams& params) {
     }
 
     // Создаём индексы для рёбер
-    mesh.indices.clear();
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
+    mesh.init_edges_faces();
 
     return mesh;
 }
@@ -137,8 +123,6 @@ void create_surface_menu(bool& is_shown, SurfaceParams& params, Mesh& current_me
 
         // Создаём поверхность с обновлёнными параметрами
         current_mesh = createSurfaceSegment(params);
-
-
     }
 
     if (ImGui::Button("Reset Settings")) {
@@ -150,6 +134,3 @@ void create_surface_menu(bool& is_shown, SurfaceParams& params, Mesh& current_me
 
     ImGui::End();
 }
-
-
-#endif //CREATE_PLOT_H

@@ -134,13 +134,13 @@ Mesh create_figure(unsigned axis, int np, int win_width, int win_height) {
     }
 
     // Генерация индексов
-    mesh.indices.clear(); // Создание списка индексов
+    mesh.edgeIndices.clear(); // Создание списка индексов
     for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
             int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
+            mesh.edgeIndices.push_back(idx0);
+            mesh.edgeIndices.push_back(idx1);
         }
     }
     points.clear();
@@ -186,22 +186,13 @@ Mesh generateRevolvedMesh(const Point3& axis, unsigned int np) {
         }
     }
 
-    mesh.indices.clear(); // Создание списка индексов
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
+    mesh.init_edges_faces();
 
     return mesh;
 
 }
 
-void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
-{
+void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh) {
 	static Point3 axis;
 	static int np = 3;
 	ImGui::Begin("Rotation figure creator");
@@ -217,11 +208,11 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
     ImGui::Text("First point");
 
     ImGui::PushItemWidth(50);
-    ImGui::InputFloat("x", &axis.x);
+    ImGui::InputFloat("X", &axis.x);
     ImGui::SameLine();
-    ImGui::InputFloat("y", &axis.y);
+    ImGui::InputFloat("Y", &axis.y);
     ImGui::SameLine();
-    ImGui::InputFloat("z", &axis.z);
+    ImGui::InputFloat("Z", &axis.z);
     ImGui::PopItemWidth();
 
 	ImGui::Separator();
@@ -234,7 +225,7 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
 		is_not_all_points = true;
 	}
 
-    if (ImGui::Button("Cencel")) {
+    if (ImGui::Button("Cancel")) {
         is_shown = false;
         points.clear();
     }
