@@ -1,10 +1,9 @@
 #include "rotation_figure_creator.h"
 #include "imgui.h"
 #include "imgui/backends/imgui_impl_glfw.h"
-#include<vector>
-
+#include <vector>
 #define _USE_MATH_DEFINES
-#include<math.h>
+#include <cmath>
 
 using std::vector; using std::array;
 

@@ -1,10 +1,14 @@
-﻿// Mesh.h
-#pragma once
+﻿#pragma once
 #include<vector>
 #include<cmath>
 
-struct Point3 { // Структура для представления точки в 3D пространстве
+struct TextureCoord {
+    float u, v;
+};
+
+struct Point3 {
     float x, y, z;
+    TextureCoord texCoord{};
 
     Point3() : x(0), y(0), z(0) {}
     Point3(float x, float y, float z) : x(x), y(y), z(z) {}
@@ -25,7 +29,11 @@ struct Point3 { // Структура для представления точк
         return { x * scalar, y * scalar, z * scalar };
     }
 
-    Point3 cross(const Point3& other) const { // Векторное произведение
+    bool operator<(const Point3& other) const {
+        return memcmp(this, &other, sizeof(Point3)) < 0;
+    }
+
+    Point3 cross(const Point3& other) const {
         return {
                 y * other.z - z * other.y,
                 z * other.x - x * other.z,
@@ -33,11 +41,11 @@ struct Point3 { // Структура для представления точк
         };
     }
 
-    float dot(const Point3& other) const { // Скалярное произведение
+    float dot(const Point3& other) const {
         return x * other.x + y * other.y + z * other.z;
     }
 
-    Point3 normalize() const { // Нормализация вектора
+    Point3 normalize() const {
         float len = std::sqrt(x * x + y * y + z * z);
         if (len > 0)
             return { x / len, y / len, z / len };
@@ -45,11 +53,7 @@ struct Point3 { // Структура для представления точк
     }
 };
 
-struct TextureCoord {
-    float u, v;
-};
-
-struct Polygon3 { // Структура полигона
+struct Polygon3 {
     std::vector<int> vertex_indices;
     std::vector<int> texture_indices;
     std::vector<int> normal_indices;
@@ -58,9 +62,8 @@ struct Polygon3 { // Структура полигона
 struct Mesh {
     std::vector<Point3> vertices;
     std::vector<Polygon3> polygons;
-    std::vector<TextureCoord> textureCoords;
-    std::vector<unsigned int> faceIndices; // Indices for drawing faces
-    std::vector<unsigned int> edgeIndices; // Indices for drawing edges
+    std::vector<unsigned int> faceIndices;
+    std::vector<unsigned int> edgeIndices;
 
     void init_edges_faces() {
         faceIndices.clear();

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <map>
 #include "../models/Mesh.h"
 
 Mesh loadOBJ(const std::string& path) {
@@ -15,8 +16,10 @@ Mesh loadOBJ(const std::string& path) {
     }
 
     std::vector<Point3> temp_vertices;
-    std::vector<Point3> temp_normals;
     std::vector<TextureCoord> temp_texcoords;
+    std::vector<Point3> temp_normals;
+    std::vector<Point3> uniqueVertices;
+    std::map<Point3, unsigned int> vertexToIndex;
 
     std::string line;
     while (std::getline(file, line)) {
@@ -30,15 +33,15 @@ Mesh loadOBJ(const std::string& path) {
             ss >> x >> y >> z;
             temp_vertices.emplace_back(x, y, z);
         } else if (prefix == "vt") {
-            // Координаты текстур
+            // Текстурные координаты
             float u, v;
             ss >> u >> v;
-            temp_texcoords.push_back({u, v});
+            temp_texcoords.emplace_back(u, v);
         } else if (prefix == "vn") {
-            // Нормали
+            // Нормали (не используются в текущей реализации)
             float x, y, z;
             ss >> x >> y >> z;
-            temp_normals.push_back({x, y, z});
+            temp_normals.emplace_back(x, y, z);
         } else if (prefix == "f") {
             // Грани
             Polygon3 poly;
@@ -48,6 +51,7 @@ Mesh loadOBJ(const std::string& path) {
                 std::string index_str;
                 int vertex_index = -1, texcoord_index = -1, normal_index = -1;
 
+                // Формат: v/t/n
                 std::getline(vertex_ss, index_str, '/');
                 if (!index_str.empty()) {
                     vertex_index = std::stoi(index_str) - 1;
@@ -64,12 +68,23 @@ Mesh loadOBJ(const std::string& path) {
                     }
                 }
 
-                poly.vertex_indices.push_back(vertex_index);
-                if (texcoord_index != -1) {
-                    poly.texture_indices.push_back(texcoord_index);
+                // Создание уникальной вершины
+                Point3 vertex;
+                vertex = temp_vertices[vertex_index];
+                if (texcoord_index != -1 && texcoord_index < temp_texcoords.size()) {
+                    vertex.texCoord = temp_texcoords[texcoord_index];
+                } else {
+                    vertex.texCoord = {0.0f, 0.0f}; // Значение по умолчанию
                 }
-                if (normal_index != -1) {
-                    poly.normal_indices.push_back(normal_index);
+
+                // Проверка, существует ли уже такая вершина
+                if (vertexToIndex.find(vertex) == vertexToIndex.end()) {
+                    uniqueVertices.push_back(vertex);
+                    unsigned int newIndex = static_cast<unsigned int>(uniqueVertices.size() - 1);
+                    vertexToIndex[vertex] = newIndex;
+                    poly.vertex_indices.push_back(newIndex);
+                } else {
+                    poly.vertex_indices.push_back(vertexToIndex[vertex]);
                 }
             }
             mesh.polygons.push_back(poly);
@@ -77,27 +92,10 @@ Mesh loadOBJ(const std::string& path) {
     }
 
     // Устанавливаем вершины
-    mesh.vertices = temp_vertices;
-    mesh.textureCoords = temp_texcoords;
+    mesh.vertices = uniqueVertices;
 
-    // Создание списка индексов для отрисовки линий
-    mesh.faceIndices.clear();
-    mesh.edgeIndices.clear();
-    for (const auto& poly : mesh.polygons) {
-        // Create edge indices
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.edgeIndices.push_back(idx0);
-            mesh.edgeIndices.push_back(idx1);
-        }
-        // Create face indices (triangulate the polygon)
-        for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
-            mesh.faceIndices.push_back(poly.vertex_indices[0]);
-            mesh.faceIndices.push_back(poly.vertex_indices[i]);
-            mesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
-        }
-    }
+    // Создание списков индексов граней и ребер
+    mesh.init_edges_faces();
 
     file.close();
     return mesh;

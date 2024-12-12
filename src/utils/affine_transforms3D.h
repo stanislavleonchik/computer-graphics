@@ -102,7 +102,6 @@ void uncache_transformations() {
     rotation_val[3] = cache::cache_rotation_val[3];
 }
 
-//окно для задания вектора, вокруг которого будет крутиться объект
 void show_create_custom_vec() {
     ImGui::Begin("Custom Vector", &show_custom_vec_window, ImGuiWindowFlags_AlwaysAutoResize);
 

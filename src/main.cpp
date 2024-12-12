@@ -55,7 +55,6 @@ void updateCameraFront() {
 
     // Преобразуем нормализованный вектор в углы поворота
     camObjRot.y = (std::atan2(normalizedDirection.x, normalizedDirection.z) - 90.0f) * 180.0f / M_PI; // Угол вокруг оси Y
-
 }
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -68,8 +67,44 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void char_callback(GLFWwindow* window, unsigned int codepoint);
 void setup_imgui(GLFWwindow* window);
 void show_camera_object_tools(bool& is_camera_tools_shown);
-void ModelsView(Mesh& mesh, int& meshNum);
-void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh);
+void ModelsView(Mesh& mesh, int& meshNum, GLuint& texture);
+void updateMeshBuffers(GLuint VBO, GLuint EBO, const Mesh& mesh);
+GLuint LoadTexture(const char* path) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    // Загрузка изображения
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data) {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        // Передача данных текстуры в OpenGL
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        // Установка параметров обертки и фильтрации
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else {
+        std::cerr << "Не удалось загрузить текстуру: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
 
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
@@ -121,6 +156,11 @@ int main() {
     Mesh cameraMesh = loadOBJ("../assets/camera.obj");
     mesh.init_edges_faces();
     cameraMesh.init_edges_faces();
+    // Загрузка текстуры
+    GLuint texture = LoadTexture("../assets/uss.png");
+    if (texture == 0) {
+        std::cerr << "Текстура не загружена!" << std::endl;
+    }
 
     SurfaceParams params(
         [](float x, float y) { return std::sin(x) * std::cos(y); }, // Функция z = sin(x) * cos(y)
@@ -130,32 +170,52 @@ int main() {
         "Sine-Cosine Surface"                                     // Имя поверхности
     );
 
-    GLuint VBO;
-    GLuint faceVAO, faceEBO;
-    GLuint edgeVAO, edgeEBO;
-
-    glGenVertexArrays(1, &faceVAO);
-    glGenVertexArrays(1, &edgeVAO);
+    // Создание VAO и VBO для граней
+    GLuint VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
-    glGenBuffers(1, &faceEBO);
-    glGenBuffers(1, &edgeEBO);
+    glGenBuffers(1, &EBO);
 
-    // Set up face VAO
-    glBindVertexArray(faceVAO);
+    glBindVertexArray(VAO);
+
+    // Загрузка данных вершин
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+
+    // Загрузка данных индексов граней
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
+
+    // Атрибут позиции
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Set up edge VAO
+    // Атрибут текстурных координат
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)(offsetof(Point3, texCoord)));
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
+
+    GLuint edgeVAO, edgeEBO;
+    glGenVertexArrays(1, &edgeVAO);
+    glGenBuffers(1, &edgeEBO);
+
     glBindVertexArray(edgeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // VBO is already filled
+
+    // Используем тот же VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    // Загрузка данных индексов ребер
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
+
+    // Атрибут позиции
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)0);
     glEnableVertexAttribArray(0);
+
+    // Атрибут текстурных координат (можно отключить, если не нужны для ребер)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)(offsetof(Point3, texCoord)));
+    glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 
@@ -188,26 +248,34 @@ int main() {
     std::string vertexShaderSource = R"(
 #version 410 core
 layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec2 aTexCoord;
+
+out vec2 TexCoord;
 
 uniform mat4 uMVP;
 
 void main() {
     gl_Position = uMVP * vec4(aPos, 1.0);
+    TexCoord = aTexCoord;
 }
     )";
 
     std::string fragmentShaderSource = R"(
 #version 410 core
 
-uniform vec4 color;
-uniform bool useUniformColor;
+in vec2 TexCoord;
 
 out vec4 FragColor;
+
+uniform sampler2D texture1;
+uniform bool useUniformColor;
+uniform vec4 color;
+
 void main() {
     if (useUniformColor) {
         FragColor = color;
     } else {
-        FragColor = vec4(gl_FragCoord.x / 2800.0, gl_FragCoord.y / 1600.0, 1600.0, 1.0);
+        FragColor = texture(texture1, TexCoord);
     }
 }
     )";
@@ -242,8 +310,13 @@ void main() {
 
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP");
-    GLint colorLoc = glGetUniformLocation(shaderProgram, "color");
     GLint useUniformColorLoc = glGetUniformLocation(shaderProgram, "useUniformColor");
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "color");
+    GLint texture1Loc = glGetUniformLocation(shaderProgram, "texture1");
+
+    /// Установка текстурного сэмплера (должен быть установлен один раз, например, после линковки шейдеров)
+    glUseProgram(shaderProgram);
+    glUniform1i(texture1Loc, 0); // GL_TEXTURE0
     /// Основной цикл
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); /// Очистка буфера цвета и глубины
@@ -313,11 +386,11 @@ void main() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Model")) {
-                ModelsView(mesh, meshNum);
+                ModelsView(mesh, meshNum, texture);
 
                 if (!mesh.vertices.empty()) {
                     mesh.init_edges_faces();
-                    updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
+                    updateMeshBuffers(VBO, EBO, mesh);
                 }
                 ImGui::EndMenu();
             }
@@ -334,11 +407,11 @@ void main() {
 
         if (is_surface_tools_shown) {
             create_surface_menu(is_surface_tools_shown, params, mesh);
-            updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
+            updateMeshBuffers(VBO, EBO, mesh);
         }
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, mesh);
-            updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
+            updateMeshBuffers(VBO, EBO, mesh);
         }
 
         make_affine_transforms(model, mesh);
@@ -382,18 +455,29 @@ void main() {
         /// Set the MVP matrix
         glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
 
-        /// Draw Faces with Gradient Color
+        /// Привязка текстуры
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        /// Отрисовка граней с текстурой
+        glUniform1i(useUniformColorLoc, GL_FALSE); // Использовать текстуру
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.faceIndices.size()), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+
+        /// Отрисовка ребер (если нужно)
         if (isFacesShown) {
-            glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
-            glBindVertexArray(faceVAO);
+            glUniform1i(useUniformColorLoc, GL_FALSE); // Использовать текстуру
+            glBindVertexArray(VAO);
             glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
         }
-        /// Draw Edges in White Color
-        glUniform1i(useUniformColorLoc, isFacesShown); // Use uniform color
-        glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 1.0f); // Set color to white
+
+        /// Отрисовка ребер в белом цвете
+        glUniform1i(useUniformColorLoc, GL_TRUE); // Использовать единообразный цвет
+        glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 1.0f); // Белый цвет
         glBindVertexArray(edgeVAO);
-        glDrawElements(GL_LINES, mesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_LINES, static_cast<GLsizei>(mesh.edgeIndices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
         if (is_camera_shown) {
@@ -426,13 +510,13 @@ void main() {
         glfwSwapBuffers(window);
     }
     /// Конец основного цикла
-
-    glDeleteVertexArrays(1, &faceVAO);
-    glDeleteVertexArrays(1, &edgeVAO);
+    glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &faceEBO);
+    glDeleteBuffers(1, &EBO);
+    glDeleteVertexArrays(1, &edgeVAO);
     glDeleteBuffers(1, &edgeEBO);
-
+    glDeleteProgram(shaderProgram);
+    glDeleteTextures(1, &texture);
     glfwTerminate();
     return 0;
 }
@@ -452,19 +536,14 @@ GLuint CompileShader(GLenum type, const std::string& source) { // Функция
     }
     return shader;
 }
-void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh) {
+void updateMeshBuffers(GLuint VBO, GLuint EBO, const Mesh& mesh) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-    /// Update faceEBO
-    glBindVertexArray(faceVAO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
-    /// Update edgeEBO
-    glBindVertexArray(edgeVAO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
 }
-void ModelsView(Mesh& mesh, int& meshNum) {
+void ModelsView(Mesh& mesh, int& meshNum, GLuint& texture) {
     if (ImGui::MenuItem("Tetrahedron", NULL, meshNum == 0)) { meshNum = 0; mesh = loadOBJ("../assets/tetrahedron.obj"); }
     if (ImGui::MenuItem("Hexahedron", NULL, meshNum == 1)) { meshNum = 1; mesh = loadOBJ("../assets/diamond.obj"); }
     if (ImGui::MenuItem("Octahedron", NULL, meshNum == 2)) { meshNum = 2; mesh = loadOBJ("../assets/octahedron.obj"); }
@@ -474,8 +553,8 @@ void ModelsView(Mesh& mesh, int& meshNum) {
     if (ImGui::MenuItem("Cube", NULL, meshNum == 6)) { meshNum = 6; mesh = loadOBJ("../assets/cube.obj"); }
     if (ImGui::MenuItem("Sphere", NULL, meshNum == 7)) { meshNum = 7; mesh = loadOBJ("../assets/sphere.obj"); }
     if (ImGui::MenuItem("Shuttle", NULL, meshNum == 8)) { meshNum = 8; mesh = loadOBJ("../assets/shuttle.obj"); }
-    if (ImGui::MenuItem("USS Enterprise", NULL, meshNum == 9)) { meshNum = 9; mesh = loadOBJ("../assets/ussenterprise.obj"); }
-    if (ImGui::MenuItem("Soul", NULL, meshNum == 10)) { meshNum = 10; mesh = loadOBJ("../assets/soul.obj"); }
+    if (ImGui::MenuItem("USS Enterprise", NULL, meshNum == 9)) { meshNum = 9; mesh = loadOBJ("../assets/ussenterprise.obj"); texture = LoadTexture("../assets/uss.png"); }
+    if (ImGui::MenuItem("Saul", NULL, meshNum == 10)) { meshNum = 10; mesh = loadOBJ("../assets/saul.obj"); texture = LoadTexture("../assets/model.png"); }
 }
 void show_camera_object_tools(bool& is_camera_tools_shown) {
     if (!is_camera_tools_shown) return;
