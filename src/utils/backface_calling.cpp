@@ -1,55 +1,59 @@
 ﻿#include"backface_calling.h"
-#include"view_vector.h"
+#include <vector>
+
+using std::vector;
 
 bool is_not_set_vector = true;
 
-void backface_calling(Mesh& mesh) {
 
-	set_vector_view();
+void backface_culling_axon(Mesh& mesh, const Point3 camera_dir) {
+
+	Point3 vv = { 0, 0, -2 };
 
 	if (mesh.indices.empty() || mesh.vertices.empty())
 		return;
 
-	Mesh m;
-	m.vertices = mesh.vertices;
+	vector<unsigned int> visiuble_inds;
 
-	for (size_t i = 1; i < mesh.indices.size()-1; i++)
+	for (const auto& polygon : mesh.polygons)
 	{
-		Point3 v1 = mesh.vertices[mesh.indices[i - 1]],
-			   v2 = mesh.vertices[mesh.indices[i	]],
-			   v3 = mesh.vertices[mesh.indices[i + 1]];
-		Point3 normal = (v2 - v1).cross(v3 - v1);
+		if (polygon.vertex_indices.size() < 3) continue;
 
-		if (normal.dot(view_vector) > 0.0000001) {
-			m.indices.push_back(mesh.indices[i - 1]);
-			m.indices.push_back(mesh.indices[i]);
-			m.indices.push_back(mesh.indices[i + 1]);
+		const Point3& v0 = mesh.vertices[polygon.vertex_indices[0]];
+		const Point3& v1 = mesh.vertices[polygon.vertex_indices[1]];
+		const Point3& v2 = mesh.vertices[polygon.vertex_indices[2]];
+
+		Point3 normal = ((v1 - v0).cross(v2 - v0)).normalize();
+
+		if (normal.dot(camera_dir) > 0) {
+			visiuble_inds.insert(visiuble_inds.end(), polygon.vertex_indices.begin(), polygon.vertex_indices.end());
 		}
 	}
 
-	//докручиваем последние
-	unsigned i = mesh.indices.size() - 1;
-	Point3 v1 = mesh.vertices[mesh.indices[i - 1]],
-		v2 = mesh.vertices[mesh.indices[i]],
-		v3 = mesh.vertices[mesh.indices[0]];
-	Point3 normal = (v2 - v1).cross(v3 - v1);
+	mesh.indices = visiuble_inds;
+}
 
-	if (normal.dot(view_vector) > 0.0000001) {
-		m.indices.push_back(mesh.indices[i - 1]);
-		m.indices.push_back(mesh.indices[i]);
-		m.indices.push_back(mesh.indices[0]);
-	}
+void backface_culling_pers(Mesh& mesh, const Point3 camera_pos) {
+    
+	vector<unsigned int> visible_indices;
 
-	v1 = mesh.vertices[mesh.indices[i]];
-	v2 = mesh.vertices[mesh.indices[0]];
-	v3 = mesh.vertices[mesh.indices[1]];
-	normal = (v2 - v1).cross(v3 - v1);
+    for (const auto& polygon : mesh.polygons) {
+        if (polygon.vertex_indices.size() < 3) continue;
 
-	if (normal.dot(view_vector) > 0.0000001) {
-		m.indices.push_back(mesh.indices[i]);
-		m.indices.push_back(mesh.indices[0]);
-		m.indices.push_back(mesh.indices[1]);
-	}
+        const Point3& v0 = mesh.vertices[polygon.vertex_indices[0]];
+        const Point3& v1 = mesh.vertices[polygon.vertex_indices[1]];
+        const Point3& v2 = mesh.vertices[polygon.vertex_indices[2]];
 
-	mesh = m;
+        Point3 edge1 = v1 - v0;
+        Point3 edge2 = v2 - v0;
+        Point3 normal = edge1.cross(edge2).normalize();
+
+        Point3 to_camera = camera_pos - v0;
+
+        if (normal.dot(to_camera) > 0) {
+            visible_indices.insert(visible_indices.end(), polygon.vertex_indices.begin(), polygon.vertex_indices.end());
+        }
+    }
+
+    mesh.indices = visible_indices;
 }

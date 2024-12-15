@@ -290,6 +290,10 @@ int main() {
         }
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, rf_figure);
+        if (is_bf_cull) {
+            set_vector_view(mesh, cameraPos, cameraFront, is_bf_cull);
+            if (!is_bf_cull)
+                pushing_to_channel(mesh);
         }
 
 

@@ -40,6 +40,8 @@ add_executable(
 		src/views/rotation_figure_creator.cpp
 		src/utils/load_obj.h
 		src/utils/save_obj.h
+		src/utils/backface_calling.h
+		src/utils/backface_calling.cpp
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw glad)

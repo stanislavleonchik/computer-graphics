@@ -3,25 +3,37 @@
 
 #include"imgui.h"
 #include"Mesh.h"
+#include"backface_calling.h"
 
-Point3 view_vector = { 0, 0, -1 };
+void set_vector_view(Mesh& mesh, Point3 cameraPos, Point3 cameraDir, bool& is_shown) {
 
-void set_vector_view() {
+    static Point3 view_vector;
+    static bool projection;
 
-    static Point3 local_view_vector;
-
-	ImGui::Begin("Set vector", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+	ImGui::Begin("Set view vector", &is_shown, ImGuiWindowFlags_AlwaysAutoResize);
 
     ImGui::PushItemWidth(50);
-    ImGui::InputFloat("x", &local_view_vector.x);
+    ImGui::InputFloat("x", &view_vector.x);
     ImGui::SameLine();
-    ImGui::InputFloat("y", &local_view_vector.y);
+    ImGui::InputFloat("y", &view_vector.y);
     ImGui::SameLine();
-    ImGui::InputFloat("z", &local_view_vector.z);
+    ImGui::InputFloat("z", &view_vector.z);
     ImGui::PopItemWidth();
 
-    if (ImGui::Button("Accept"))
-        view_vector = local_view_vector;
+    if(ImGui::Button("Camera position")) {
+        view_vector = cameraPos;
+    }
+
+    if (ImGui::RadioButton("Perspective", projection == false)) { projection = false; }
+    if (ImGui::RadioButton("Axonometric", projection == true)) { projection = true; }
+
+    if (ImGui::Button("Accept")) {
+        if (projection)
+            backface_culling_axon(mesh, view_vector);
+        else
+            backface_culling_pers(mesh, view_vector);
+        is_shown = false;
+    }
     
 	ImGui::End();
 }
