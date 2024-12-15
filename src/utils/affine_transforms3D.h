@@ -92,7 +92,7 @@ void make_vec_rotation(Matrix4x4& transforms)
 
 void make_affine_transforms(Matrix4x4& model, Mesh mesh) {
 
-    //figureCenter = calculateFigureCenter(mesh.vertices);
+    figureCenter = calculateFigureCenter(mesh.vertices);
     //model = Matrix4x4::translate(Point3(-figureCenter.x, -figureCenter.y, -figureCenter.z)) * model;
 
     //// Шаг 2: Применяем масштабирование и поворот
@@ -128,12 +128,12 @@ void make_affine_transforms(Matrix4x4& model, Mesh mesh) {
 
     model = Matrix4x4::translate(Point3(translation[0], translation[1], translation[2])) * model; // Применение смещения
 
-    //потому что на самом деле повороты и изменение масштаба надо применять после того как мы переместим её
-    //это справедливо только для нашей реализации, поскольку значение центра фигуры и значения вершин никогда не меняются
+    model = Matrix4x4::translate(Point3(-figureCenter.x, -figureCenter.y, -figureCenter.z)) * model; 
     model = Matrix4x4::scale(Point3(scaling[0] * globalScale, scaling[1] * globalScale, scaling[2] * globalScale)) * model;
     model = Matrix4x4::rotation(rotation_val[0] * M_PI / 180.0f, Point3(1.0f, 0.0f, 0.0f)) * model;
     model = Matrix4x4::rotation(rotation_val[1] * M_PI / 180.0f, Point3(0.0f, 1.0f, 0.0f)) * model;
     model = Matrix4x4::rotation(rotation_val[2] * M_PI / 180.0f, Point3(0.0f, 0.0f, 1.0f)) * model;
+    model = Matrix4x4::translate(figureCenter) * model;
 
     make_vec_rotation(model);
 }

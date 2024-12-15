@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <map>
+#include <functional>
 #include "Mesh.h"
 #include "Matrix4x4.h"
 #include "create_polyhedrons.h"
@@ -16,6 +17,7 @@
 #include "rotation_figure_creator.h"
 #include "load_obj.h"
 #include "save_obj.h"
+#include "view_vector.h"
 
 GLuint CompileShader(GLenum type, const std::string& source);
 
@@ -105,7 +107,6 @@ int main() {
         50,                                                       // Разрешение
         "Sine-Cosine Surface"                                     // Имя поверхности
     );
-    Mesh rf_figure;
 
     for (const auto& poly : mesh.polygons) { // Создание списка индексов
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
@@ -176,6 +177,7 @@ int main() {
     bool is_tools_shown = true;
     bool is_surface_tools_shown = false;
     bool is_rf_creator_shown = false;
+    bool is_bf_cull = false;
     static int currentPolyhedron = 4;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
@@ -183,6 +185,17 @@ int main() {
     
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     const char* projectionNames[] = { "Perspective", "Axonometric" };
+
+
+    auto pushing_to_channel = [VBO, EBO](Mesh mesh) {
+        if (!mesh.vertices.empty() && !mesh.indices.empty()) {
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+        }
+    };
 
     while (!glfwWindowShouldClose(window)) { // Основной цикл
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
@@ -201,8 +214,6 @@ int main() {
         if (is_tools_shown) {
             create_affine_tools(is_tools_shown);
         }
-        make_affine_transforms(model, mesh);
-        make_affine_transforms(model, rf_figure);
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -227,10 +238,8 @@ int main() {
                     */
                     std::cin >> modelFilePath;
                     mesh = loadOBJ(modelFilePath);
-                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                    currentPolyhedron = 7;
+                    pushing_to_channel(mesh);
                 }
                 ImGui::EndMenu();
             }
@@ -243,36 +252,44 @@ int main() {
                     if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
                     ImGui::EndMenu();
                 }
-                if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { currentPolyhedron = 0; }
-                if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { currentPolyhedron = 1; }
-                if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
-                if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { currentPolyhedron = 3; }
-                if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { currentPolyhedron = 4; }
-                if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; currentPolyhedron = 5; rf_figure = Mesh(); }
-
-                if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 6)) { currentPolyhedron = 6; }
-                switch (currentPolyhedron) {
-                    case 0: mesh = createTetrahedron(); break;
-                    case 1: mesh = createHexahedron(); break;
-                    case 2: mesh = createOctahedron(); break;
-                    case 3: mesh = createIcosahedron(); break;
-                    case 4: mesh = createDodecahedron(); break;
-                    case 5: mesh = rf_figure; break;
-
-                    case 6: mesh = createSurfaceSegment(params); break;
+                if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { 
+                    currentPolyhedron = 0;
+                    mesh = createTetrahedron();
+                    pushing_to_channel(mesh);
                 }
-                switch (currentPolyhedron) {
-                    case 0: mesh = createTetrahedron(); break;
-                    case 1: mesh = createHexahedron(); break;
-
+                if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { 
+                    currentPolyhedron = 1;
+                    mesh = createHexahedron();
+                    pushing_to_channel(mesh);
                 }
-
-                if (!mesh.vertices.empty()) {
-                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+                if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { 
+                    currentPolyhedron = 2; 
+                    mesh = createOctahedron();
+                    pushing_to_channel(mesh);
+                }
+                if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { 
+                    currentPolyhedron = 3; 
+                    mesh = createIcosahedron();
+                    pushing_to_channel(mesh);
+                }
+                if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { 
+                    currentPolyhedron = 4;
+                    mesh = createDodecahedron();
+                    pushing_to_channel(mesh);
+                }
+                if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { 
+                    is_rf_creator_shown = !is_rf_creator_shown; 
+                    currentPolyhedron = 5; 
+                    mesh = Mesh();
+                    pushing_to_channel(mesh);
+                }
+                if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 6)) { 
+                    currentPolyhedron = 6;
+                    mesh = createSurfaceSegment(params);
+                    pushing_to_channel(mesh);
+                }
+                if (ImGui::MenuItem("Back-face culling", NULL)) {
+                    is_bf_cull = true;
                 }
 
                 ImGui::EndMenu();
@@ -282,21 +299,18 @@ int main() {
 
         if (is_surface_tools_shown) {
             create_surface_menu(is_surface_tools_shown, params, mesh);
-            glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
+            pushing_to_channel(mesh);
         }
         if (is_rf_creator_shown) {
-            rf_tools(is_rf_creator_shown, window, rf_figure);
+            rf_tools(is_rf_creator_shown, window, mesh);
+            if (!is_rf_creator_shown)
+                pushing_to_channel(mesh);
+        }
         if (is_bf_cull) {
             set_vector_view(mesh, cameraPos, cameraFront, is_bf_cull);
             if (!is_bf_cull)
                 pushing_to_channel(mesh);
         }
-
-
 
         make_affine_transforms(model, mesh);
 

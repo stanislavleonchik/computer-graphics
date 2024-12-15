@@ -202,8 +202,8 @@ Mesh generateRevolvedMesh(const Point3& axis, unsigned int np) {
 
 void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
 {
-	static Point3 axis;
-	static int np = 3;
+    static Point3 axis = { 0, 1, 0 };
+	static int np = 20;
 	ImGui::Begin("Rotation figure creator");
 	
     if (is_not_all_points) {
@@ -214,7 +214,6 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
     draw_rotation_body();
 
 	ImGui::Text("Set the axis of rotation");
-    ImGui::Text("First point");
 
     ImGui::PushItemWidth(50);
     ImGui::InputFloat("x", &axis.x);
