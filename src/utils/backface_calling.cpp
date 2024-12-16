@@ -25,7 +25,7 @@ void backface_culling_axon(Mesh& mesh, const Point3 camera_dir) {
 
 		Point3 normal = ((v1 - v0).cross(v2 - v0)).normalize();
 
-		if (normal.dot(camera_dir) > 0) {
+		if (normal.dot(camera_dir) < 0) {
 			visiuble_inds.insert(visiuble_inds.end(), polygon.vertex_indices.begin(), polygon.vertex_indices.end());
 		}
 	}
@@ -48,9 +48,9 @@ void backface_culling_pers(Mesh& mesh, const Point3 camera_pos) {
         Point3 edge2 = v2 - v0;
         Point3 normal = edge1.cross(edge2).normalize();
 
-        Point3 to_camera = camera_pos - v0;
+        Point3 to_camera = (camera_pos - v0).normalize();
 
-        if (normal.dot(to_camera) > 0) {
+        if (normal.dot(to_camera) < 0) {
             visible_indices.insert(visible_indices.end(), polygon.vertex_indices.begin(), polygon.vertex_indices.end());
         }
     }

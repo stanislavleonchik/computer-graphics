@@ -308,8 +308,7 @@ int main() {
         }
         if (is_bf_cull) {
             set_vector_view(mesh, cameraPos, cameraFront, is_bf_cull);
-            if (!is_bf_cull)
-                pushing_to_channel(mesh);
+            pushing_to_channel(mesh);
         }
 
         make_affine_transforms(model, mesh);
