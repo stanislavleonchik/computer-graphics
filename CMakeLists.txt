@@ -42,6 +42,7 @@ add_executable(
 		src/utils/save_obj.h
 		src/utils/backface_calling.h
 		src/utils/backface_calling.cpp
+		src/main.cpp
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw glad)

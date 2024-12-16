@@ -5,19 +5,15 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <map>
-#include <functional>
 #include "Mesh.h"
 #include "Matrix4x4.h"
-#include "create_polyhedrons.h"
 #include "create_plot.h"
 #include "affine_transforms3D.h"
 #include "rotation_figure_creator.h"
 #include "load_obj.h"
 #include "save_obj.h"
-#include "view_vector.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
 
 GLuint CompileShader(GLenum type, const std::string& source);
 
@@ -25,33 +21,55 @@ double lastX, lastY; // Глобальные переменные для упр�
 float yaw = -90.0f;
 float pitch = 0.0f;
 bool firstMouse = true;
+bool pressed = false;
 
 Point3 cameraPos(0.0f, 0.0f, 3.0f);
 Point3 cameraFront(0.0f, 0.0f, -1.0f);
 Point3 cameraUp(0.0f, 1.0f, 0.0f);
 
-std::string modelFilePath = "";
+static Point3 camObjPos(-2.133f, 1.0f, 2.434f);
+static Point3 camObjRot(0.0f, 0.0f, 0.0f);
+static float camObjScale = 0.1f;
+static float cameraRadius = 7.0f;
+float angle = 0.0f;
+float angularSpeed = 1.0f;
+static bool CCTV = false;
 
-void processInput(GLFWwindow* window, float& nearPlaneDistance);
+void updateCameraPosition(float deltaTime) {
+    angle += angularSpeed * deltaTime; // Увеличиваем угол
+    if (angle > 2.0f * M_PI) {
+        angle -= 2.0f * M_PI; // Ограничиваем угол в пределах от 0 до 2π
+    }
 
+    // Вычисляем координаты камеры
+    camObjPos.x = cameraRadius * std::cos(angle);
+    camObjPos.z = cameraRadius * std::sin(angle);
+
+    // Центр взгляда остаётся в начале координат
+    camObjRot.y = -cameraPos.normalize().y;
+}
+void updateCameraFront() {
+    Point3 center(0.0f, 0.0f, 0.0f); // Центр координат
+    Point3 direction = center - Point3(camObjPos.x, camObjPos.y, camObjPos.z); // Вектор направления
+    Point3 normalizedDirection = direction.normalize(); // Нормализация
+
+    // Преобразуем нормализованный вектор в углы поворота
+    camObjRot.y = (std::atan2(normalizedDirection.x, normalizedDirection.z) - 90.0f) * 180.0f / M_PI; // Угол вокруг оси Y
+
+}
+void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-
-bool pressed = false;
 void processCursorToggle(GLFWwindow* window);
-
 void setup_style(ImGuiStyle& style, ImGuiIO& io);
-
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
-
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-
 void char_callback(GLFWwindow* window, unsigned int codepoint);
-
 void setup_imgui(GLFWwindow* window);
+void show_camera_object_tools(bool& is_camera_tools_shown);
+void ModelsView(Mesh& mesh, int& meshNum);
+void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh);
 
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
@@ -99,7 +117,11 @@ int main() {
 
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
 
-    Mesh mesh = createDodecahedron(); // Переменная для текущего меша
+    Mesh mesh = loadOBJ("../assets/dodecahedron.obj");
+    Mesh cameraMesh = loadOBJ("../assets/camera.obj");
+    mesh.init_edges_faces();
+    cameraMesh.init_edges_faces();
+
     SurfaceParams params(
         [](float x, float y) { return std::sin(x) * std::cos(y); }, // Функция z = sin(x) * cos(y)
         -3.14f, 3.14f,                                            // Диапазон по x
@@ -108,50 +130,85 @@ int main() {
         "Sine-Cosine Surface"                                     // Имя поверхности
     );
 
-    for (const auto& poly : mesh.polygons) { // Создание списка индексов
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
+    GLuint VBO;
+    GLuint faceVAO, faceEBO;
+    GLuint edgeVAO, edgeEBO;
 
-    GLuint VBO, VAO, EBO; // Создание VBO и VAO
-    glGenVertexArrays(1, &VAO); // Vertex Array Object (сохраняет все настройки, которые относятся к вершинным данным (VBO и EBO))
-    glGenBuffers(1, &VBO); // Vertex Buffer Object (хранит данные самих вершин)
-    glGenBuffers(1, &EBO); // Element Buffer Object (хранит индексы вершин, которые помогают переиспользовать одни и те же вершины)
+    glGenVertexArrays(1, &faceVAO);
+    glGenVertexArrays(1, &edgeVAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &faceEBO);
+    glGenBuffers(1, &edgeEBO);
 
-    glBindVertexArray(VAO); // Привязка VAO
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // Вершинный буфер
+    // Set up face VAO
+    glBindVertexArray(faceVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // Индексный буфер
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr); // Настройка вершинных атрибутов
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
-    glBindVertexArray(0); // Отвязываем VAO
+    // Set up edge VAO
+    glBindVertexArray(edgeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); // VBO is already filled
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
+    glEnableVertexAttribArray(0);
 
-    std::string vertexShaderSource = R"( // Загрузка и компиляция шейдеров
-        #version 410 core
-        layout(location = 0) in vec3 aPos;
+    glBindVertexArray(0);
 
-        uniform mat4 uMVP;
+    // отдельный VBO/VAO для cameraMesh
+    GLuint cameraVBO, cameraVAO, cameraEBO;
+    GLuint cameraEdgeVAO, cameraEdgeEBO;
+    glGenVertexArrays(1, &cameraVAO);
+    glGenVertexArrays(1, &cameraEdgeVAO);
+    glGenBuffers(1, &cameraVBO);
+    glGenBuffers(1, &cameraEBO);
+    glGenBuffers(1, &cameraEdgeEBO);
 
-        void main() {
-            gl_Position = uMVP * vec4(aPos, 1.0);
-        }
+    glBindVertexArray(cameraVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cameraVBO);
+    glBufferData(GL_ARRAY_BUFFER, cameraMesh.vertices.size() * sizeof(Point3), &cameraMesh.vertices[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cameraEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cameraMesh.faceIndices.size() * sizeof(unsigned int), &cameraMesh.faceIndices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(cameraEdgeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cameraVBO); // VBO is already filled
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cameraEdgeEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, cameraMesh.edgeIndices.size() * sizeof(unsigned int), &cameraMesh.edgeIndices[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+
+    std::string vertexShaderSource = R"(
+#version 410 core
+layout(location = 0) in vec3 aPos;
+
+uniform mat4 uMVP;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+}
     )";
 
     std::string fragmentShaderSource = R"(
-        #version 410 core
-        out vec4 FragColor;
+#version 410 core
 
-        void main() {
-    FragColor = vec4(gl_FragCoord.x / 3000.0, gl_FragCoord.y / 1500.0, gl_FragCoord.y / 1500.0, 1.0);
+uniform vec4 color;
+uniform bool useUniformColor;
+
+out vec4 FragColor;
+void main() {
+    if (useUniformColor) {
+        FragColor = color;
+    } else {
+        FragColor = vec4(gl_FragCoord.x / 2800.0, gl_FragCoord.y / 1600.0, 1600.0, 1.0);
+    }
 }
     )";
 
@@ -175,55 +232,64 @@ int main() {
     glDeleteShader(fragmentShader);
 
     bool is_tools_shown = true;
+    bool is_camera_shown = true;
+    bool is_camera_tools_shown = true;
     bool is_surface_tools_shown = false;
     bool is_rf_creator_shown = false;
-    bool is_bf_cull = false;
-    static int currentPolyhedron = 4;
-    const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
-                                                         {"Octahedron", false}, {"Icosahedron", false},
-                                                         {"Dodecahedron", false} };
-    
+    static int meshNum = 4;
+    bool CCTVStandby = true;
+    bool isFacesShown = true;
+
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
-    const char* projectionNames[] = { "Perspective", "Axonometric" };
+    GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP");
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "color");
+    GLint useUniformColorLoc = glGetUniformLocation(shaderProgram, "useUniformColor");
+    /// Основной цикл
+    while (!glfwWindowShouldClose(window)) {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); /// Очистка буфера цвета и глубины
+        glUseProgram(shaderProgram); /// Используем шейдерную программу
 
-
-    auto pushing_to_channel = [VBO, EBO](Mesh mesh) {
-        if (!mesh.vertices.empty() && !mesh.indices.empty()) {
-            glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
-        }
-    };
-
-    while (!glfwWindowShouldClose(window)) { // Основной цикл
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
-
-        glfwPollEvents(); // Обработка событий
-
+        glfwPollEvents(); /// Обработка событий
 
         processCursorToggle(window);
-        processInput(window, nearPlaneDistance);
+        processInput(window);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         Matrix4x4 model;
+        Matrix4x4 cameraModel;
         if (is_tools_shown) {
             create_affine_tools(is_tools_shown);
         }
 
+        if (CCTV && CCTVStandby) {
+            cache_transformations();      // Сохранение текущих трансформаций
+            reset_transformations();      // Сброс параметров
+            CCTVStandby = false;          // Переход в активный режим CCTV
+        } else if (!CCTV && !CCTVStandby) {
+            uncache_transformations();    // Восстановление трансформаций
+            CCTVStandby = true;           // Возвращение в standby
+        }
+
+        make_affine_transforms(model, mesh);
+        make_affine_transforms(cameraModel, cameraMesh);
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        static auto lastTime = currentTime;
+        float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+        lastTime = currentTime;
+
+        updateCameraPosition(deltaTime);
+        updateCameraFront();
+
+        show_camera_object_tools(is_camera_tools_shown);
+
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Clean")) {}
                 if (ImGui::MenuItem("Save")) {
-                    /*
-                    /Users/controldata/GitHub/computer-graphics/src/models/saved_mesh.obj
-                    */
-                    std::string savePath;
-                    std::cin >> savePath;
+                    std::string savePath = "../assets/saved_mesh.obj";
                     Mesh transformedMesh = mesh;
                     for (auto& vertex : transformedMesh.vertices) {
                         vertex = model * vertex;
@@ -236,79 +302,43 @@ int main() {
                     /*
                     /Users/controldata/Downloads/utah_teapot_lowpoly.obj
                     */
+                    std::string modelFilePath;
                     std::cin >> modelFilePath;
                     mesh = loadOBJ(modelFilePath);
-                    currentPolyhedron = 7;
-                    pushing_to_channel(mesh);
+                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("View")) {
-                if (ImGui::MenuItem("Tools", NULL, is_tools_shown)) { is_tools_shown = !is_tools_shown; }
-                if (ImGui::MenuItem("Surface tools", NULL, is_surface_tools_shown)) { is_surface_tools_shown = !is_surface_tools_shown; }
+            if (ImGui::BeginMenu("Model")) {
+                ModelsView(mesh, meshNum);
 
-                if (ImGui::BeginMenu("Projection")) {
-                    if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
-                    if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
-                    ImGui::EndMenu();
+                if (!mesh.vertices.empty()) {
+                    mesh.init_edges_faces();
+                    updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
                 }
-                if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { 
-                    currentPolyhedron = 0;
-                    mesh = createTetrahedron();
-                    pushing_to_channel(mesh);
-                }
-                if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { 
-                    currentPolyhedron = 1;
-                    mesh = createHexahedron();
-                    pushing_to_channel(mesh);
-                }
-                if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { 
-                    currentPolyhedron = 2; 
-                    mesh = createOctahedron();
-                    pushing_to_channel(mesh);
-                }
-                if (ImGui::MenuItem("Icosahedron", NULL, currentPolyhedron == 3)) { 
-                    currentPolyhedron = 3; 
-                    mesh = createIcosahedron();
-                    pushing_to_channel(mesh);
-                }
-                if (ImGui::MenuItem("Dodecahedron", NULL, currentPolyhedron == 4)) { 
-                    currentPolyhedron = 4;
-                    mesh = createDodecahedron();
-                    pushing_to_channel(mesh);
-                }
-                if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { 
-                    is_rf_creator_shown = !is_rf_creator_shown; 
-                    currentPolyhedron = 5; 
-                    mesh = Mesh();
-                    pushing_to_channel(mesh);
-                }
-                if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 6)) { 
-                    currentPolyhedron = 6;
-                    mesh = createSurfaceSegment(params);
-                    pushing_to_channel(mesh);
-                }
-                if (ImGui::MenuItem("Back-face culling", NULL)) {
-                    is_bf_cull = true;
-                }
-
                 ImGui::EndMenu();
             }
+            if (ImGui::MenuItem("Show Tools", NULL, is_tools_shown == 1)) { is_tools_shown = !is_tools_shown; }
+            if (ImGui::MenuItem("Camera", NULL, is_camera_shown == 1)) { is_camera_shown = !is_camera_shown; }
+            if (ImGui::MenuItem("Camera Tools", NULL, is_camera_tools_shown == 1)) { is_camera_tools_shown = !is_camera_tools_shown; }
+            if (ImGui::MenuItem("Surface Tools", NULL, is_surface_tools_shown)) { is_surface_tools_shown = !is_surface_tools_shown; }
+            if (ImGui::MenuItem("Rotation figure", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; }
+            if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
+            if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
+            if (ImGui::MenuItem("Show Faces", NULL, isFacesShown)) { isFacesShown = !isFacesShown; }
             ImGui::EndMainMenuBar();
         }
 
         if (is_surface_tools_shown) {
             create_surface_menu(is_surface_tools_shown, params, mesh);
-            pushing_to_channel(mesh);
+            updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
         }
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, mesh);
-            if (!is_rf_creator_shown)
-                pushing_to_channel(mesh);
-        }
-        if (is_bf_cull) {
-            set_vector_view(mesh, cameraPos, cameraFront, is_bf_cull);
-            pushing_to_channel(mesh);
+            updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
         }
 
         make_affine_transforms(model, mesh);
@@ -328,28 +358,80 @@ int main() {
 
             projection = Matrix4x4::orthographic(left, right, bottom, top, near1, far1);
         }
+
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-        Matrix4x4 mvp = model * projection * view; // Формирование общей матрицы MVP
+        Matrix4x4 mvp;
+        if (CCTV) {
+            projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f);
+            view = Matrix4x4::lookAt(
+                    Point3(camObjPos.x, camObjPos.y, camObjPos.z), // Позиция камеры
+                    Point3(0.0f, 0.0f, 0.0f),                     // Точка, на которую смотрит камера
+                    Point3(0.0f, 1.0f, 0.0f)                      // Вектор "вверх"
+            );
+
+            mvp = projection * view * model;
+        } else {
+            mvp = projection * view * model;
+        }
+
         ImGui::Render();
 
+        glUseProgram(shaderProgram);
 
-        glUseProgram(shaderProgram); // Использование шейдерной программы
+        /// Set the MVP matrix
+        glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
 
-        GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP"); // Передача матрицы MVP в шейдер
-        glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, &mvp.m[0][0]);
-
-        glBindVertexArray(VAO); // Привязка VAO и отрисовка меша
-        glDrawElements(GL_LINES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
+        /// Draw Faces with Gradient Color
+        if (isFacesShown) {
+            glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
+            glBindVertexArray(faceVAO);
+            glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
+        }
+        /// Draw Edges in White Color
+        glUniform1i(useUniformColorLoc, isFacesShown); // Use uniform color
+        glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 1.0f); // Set color to white
+        glBindVertexArray(edgeVAO);
+        glDrawElements(GL_LINES, mesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
+
+        if (is_camera_shown) {
+            // Матрица для объекта камеры
+            // Применим трансформации, заданные в camObjPos, camObjRot, camObjScale
+            cameraModel = cameraModel * Matrix4x4::translate(Point3(camObjPos.x, camObjPos.y, camObjPos.z));
+            cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.x * M_PI/180.0f, Point3(1,0,0));
+            cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.y * M_PI/180.0f, Point3(0,1,0));
+            cameraModel = cameraModel * Matrix4x4::rotation(camObjRot.z * M_PI/180.0f, Point3(0,0,1));
+            cameraModel = cameraModel * Matrix4x4::scale(Point3(camObjScale, camObjScale, camObjScale));
+            // Вычисляем MVP для объекта-камеры
+            Matrix4x4 cameraObjMVP = projection * view * cameraModel;
+            glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, cameraObjMVP.m);
+
+            // Рисуем камеру
+            glUniform1i(useUniformColorLoc, GL_FALSE);
+            glBindVertexArray(cameraVAO);
+            glDrawElements(GL_TRIANGLES, cameraMesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
+
+            glUniform1i(useUniformColorLoc, GL_TRUE); // Use uniform color
+            glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 1.0f); // Set color to white
+            glBindVertexArray(cameraEdgeVAO);
+            glDrawElements(GL_LINES, cameraMesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
+
+        }
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData()); // Обновление окна
         glfwSwapBuffers(window);
     }
+    /// Конец основного цикла
 
-    glDeleteVertexArrays(1, &VAO); // Очистка ресурсов
+    glDeleteVertexArrays(1, &faceVAO);
+    glDeleteVertexArrays(1, &edgeVAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1, &faceEBO);
+    glDeleteBuffers(1, &edgeEBO);
 
     glfwTerminate();
     return 0;
@@ -370,55 +452,102 @@ GLuint CompileShader(GLenum type, const std::string& source) { // Функция
     }
     return shader;
 }
-void processInput(GLFWwindow* window, float& nearPlaneDistance) {
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        nearPlaneDistance += 0.02f; // Увеличиваем ближнюю плоскость при движении вперёд
-        if (nearPlaneDistance > 99.0f) nearPlaneDistance = 99.0f; // Ограничение для дальности
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        nearPlaneDistance -= 0.02f; // Уменьшаем ближнюю плоскость при движении назад
-        if (nearPlaneDistance < -10.0f) nearPlaneDistance = -10.0f; // Ограничение для близости
-    }
+void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh) {
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+    /// Update faceEBO
+    glBindVertexArray(faceVAO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+    /// Update edgeEBO
+    glBindVertexArray(edgeVAO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
 }
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
+void ModelsView(Mesh& mesh, int& meshNum) {
+    if (ImGui::MenuItem("Tetrahedron", NULL, meshNum == 0)) { meshNum = 0; mesh = loadOBJ("../assets/tetrahedron.obj"); }
+    if (ImGui::MenuItem("Hexahedron", NULL, meshNum == 1)) { meshNum = 1; mesh = loadOBJ("../assets/diamond.obj"); }
+    if (ImGui::MenuItem("Octahedron", NULL, meshNum == 2)) { meshNum = 2; mesh = loadOBJ("../assets/octahedron.obj"); }
+    if (ImGui::MenuItem("Icosahedron", NULL, meshNum == 3)) { meshNum = 3; mesh = loadOBJ("../assets/icosahedron.obj"); }
+    if (ImGui::MenuItem("Dodecahedron", NULL, meshNum == 4)) { meshNum = 4; mesh = loadOBJ("../assets/dodecahedron.obj"); }
+    if (ImGui::MenuItem("Teapot", NULL, meshNum == 5)) { meshNum = 5; mesh = loadOBJ("../assets/utah_teapot_lowpoly.obj"); }
+    if (ImGui::MenuItem("Cube", NULL, meshNum == 6)) { meshNum = 6; mesh = loadOBJ("../assets/cube.obj"); }
+    if (ImGui::MenuItem("Sphere", NULL, meshNum == 7)) { meshNum = 7; mesh = loadOBJ("../assets/sphere.obj"); }
+    if (ImGui::MenuItem("Shuttle", NULL, meshNum == 8)) { meshNum = 8; mesh = loadOBJ("../assets/shuttle.obj"); }
+    if (ImGui::MenuItem("USS Enterprise", NULL, meshNum == 9)) { meshNum = 9; mesh = loadOBJ("../assets/ussenterprise.obj"); }
+    if (ImGui::MenuItem("Soul", NULL, meshNum == 10)) { meshNum = 10; mesh = loadOBJ("../assets/soul.obj"); }
+}
+void show_camera_object_tools(bool& is_camera_tools_shown) {
+    if (!is_camera_tools_shown) return;
+    ImGui::Begin("Camera Object Tools", &is_camera_tools_shown);
+    ImGui::Text("Position");
+    ImGui::SliderFloat("X", &camObjPos.x, -10.0f, 10.0f);
+    ImGui::SliderFloat("Y", &camObjPos.y, -10.0f, 10.0f);
+    ImGui::SliderFloat("Z", &camObjPos.z, -10.0f, 10.0f);
+
+    ImGui::Separator();
+    ImGui::Text("Rotation (degrees)");
+    ImGui::SliderFloat("Rot X", &camObjRot.x, -180.0f, 180.0f);
+    ImGui::SliderFloat("Rot Y", &camObjRot.y, -180.0f, 180.0f);
+    ImGui::SliderFloat("Rot Z", &camObjRot.z, -180.0f, 180.0f);
+
+    ImGui::Separator();
+    ImGui::Text("Scale");
+    ImGui::SliderFloat("Scale", &camObjScale, 0.1f, 2.0f);
+    ImGui::Text("Radius");
+    ImGui::SliderFloat("Radius", &cameraRadius, 3.0f, 10.0f);
+
+    ImGui::Separator();
+    ImGui::Text("CCTV");
+    if (ImGui::Checkbox("Watch through CCTV", &CCTV)) {}
+    ImGui::End();
+}
+static bool is_pressed = false;
+void processInput(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        translation[2] += 0.02f;
+        if (translation[2] > 99.0f) translation[2] = 99.0f;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        translation[2] -= 0.02f;
+        if (translation[2] < -10.0f) translation[2] = -10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        translation[0] += 0.02f;
+        if (translation[0] > 99.0f) translation[0] = 99.0f;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        translation[0] -= 0.02f;
+        if (translation[0] < -10.0f) translation[0] = -10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        translation[1] += 0.02f;
+        if (translation[1] > 99.0f) translation[1] = 99.0f;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        translation[1] -= 0.02f;
+        if (translation[1] < -10.0f) translation[1] = -10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        if (!is_pressed) {
+            CCTV = true;
+            is_pressed = true;
+        }
+    }
+    if ((glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE)) {
+        if (is_pressed) {
+            is_pressed = false;
+            CCTV = false;
+        }
     }
 
-    auto xoffset = static_cast<float>(xpos - lastX);
-    auto yoffset = static_cast<float>(lastY - ypos);
-    lastX = xpos;
-    lastY = ypos;
-
-    float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f) // Ограничение угла обзора по вертикали
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    Point3 front; // Обновление направления камеры
-    front.x = std::cos(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
-    front.y = std::sin(pitch * M_PI / 180.0f);
-    front.z = std::sin(yaw * M_PI / 180.0f) * std::cos(pitch * M_PI / 180.0f);
-    cameraFront = front.normalize();
-    Point3 worldUp(0.0f, 1.0f, 0.0f);
-    Point3 cameraRight = cameraFront.cross(worldUp).normalize();
-    cameraUp = cameraRight.cross(cameraFront).normalize();
 }
 void processCursorToggle(GLFWwindow* window) {
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
         if (!pressed) {
             pressed = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            firstMouse = true; // Reset firstMouse flag
         }
     } else {
         if (pressed) {
@@ -426,6 +555,50 @@ void processCursorToggle(GLFWwindow* window) {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
     }
+}
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
+        if (firstMouse) {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
+
+        float xoffset = static_cast<float>(xpos - lastX);
+        float yoffset = static_cast<float>(lastY - ypos); // Reversed since y-coordinates range from bottom to top
+        lastX = xpos;
+        lastY = ypos;
+
+        float sensitivity = 0.1f;
+        xoffset *= sensitivity;
+        yoffset *= sensitivity;
+
+        yaw += xoffset;
+        pitch += yoffset;
+
+        // Clamp the pitch angle
+        if (pitch > 89.0f) pitch = 89.0f;
+        if (pitch < -89.0f) pitch = -89.0f;
+
+        float yawRad = yaw * static_cast<float>(M_PI) / 180.0f;
+        float pitchRad = pitch * static_cast<float>(M_PI) / 180.0f;
+
+        Point3 front;
+        front.x = std::cos(yawRad) * std::cos(pitchRad);
+        front.y = std::sin(pitchRad);
+        front.z = std::sin(yawRad) * std::cos(pitchRad);
+        cameraFront = front.normalize();
+
+        // Update cameraUp vector
+        Point3 worldUp(0.0f, 1.0f, 0.0f);
+        Point3 cameraRight = cameraFront.cross(worldUp).normalize();
+        cameraUp = cameraRight.cross(cameraFront).normalize();
+    } else {
+        firstMouse = true; // Reset firstMouse flag when cursor is not disabled
+    }
+
+    // Pass event to ImGui
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
 }
 void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.FrameRounding = 12.0f;
@@ -450,8 +623,7 @@ void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) {
+    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         mouse_callback(window, xpos, ypos);
     }
     // Передача события в ImGui
@@ -479,7 +651,7 @@ void setup_imgui(GLFWwindow* window) {
     ImGui_ImplGlfw_InitForOpenGL(window, false);
     ImGui_ImplOpenGL3_Init("#version 410");
 
-    io.Fonts->AddFontFromFileTTF("assets/helvetica_regular.otf", 16.0f);
+    io.Fonts->AddFontFromFileTTF("../assets/helvetica_regular.otf", 16.0f);
     io.FontDefault = io.Fonts->Fonts.back();
 
     unsigned char* tex_pixels = nullptr;

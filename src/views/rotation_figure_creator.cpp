@@ -28,13 +28,13 @@ void draw_rotation_body() {
         return;
 
     ImDrawList* drawList = ImGui::GetBackgroundDrawList();
-    // Отображаем полигон
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     for (size_t i = 0; i < points.size() - 1; i++) {
         drawList->AddLine(
             ImVec2(points[i].x, points[i].y),
             ImVec2(points[i + 1].x, points[i + 1].y),
             IM_COL32(255, 255, 255, 255),
-            2.0f // Толщина линии
+            2.0f // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
         );
     }
 
@@ -42,13 +42,13 @@ void draw_rotation_body() {
         ImVec2(points[points.size() - 1].x, points[points.size() - 1].y),
         ImVec2(points[0].x, points[0].y),
         IM_COL32(255, 255, 255, 255),
-        2.0f // Толщина линии
+        2.0f // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
     );
 
     for (const auto& point : points) {
         drawList->AddCircleFilled(
             ImVec2(point.x, point.y),
-            10.0f, // Радиус точки
+            10.0f, // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
             IM_COL32(66, 170, 255, 255)
         );
     }
@@ -95,7 +95,7 @@ Mesh create_figure(unsigned axis, int np, int win_width, int win_height) {
     float angle_step = 2 * M_PI / np;
 
     mesh.polygons.resize(np);
-    // Генерация вершин
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
     for (int i = 0; i < np; ++i) {
         float angle = i * angle_step;
         float cos_angle = std::cos(angle);
@@ -103,7 +103,7 @@ Mesh create_figure(unsigned axis, int np, int win_width, int win_height) {
         
         for (const auto& p : points) {
             Point3 rotated;
-            // Преобразуем в нормализованные координаты
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             float xNormalized = (2.0f * static_cast<float>(p.x) / win_width) - 1.0f;
             float yNormalized =  1.0f - (2.0f * static_cast<float>(p.y) / win_height);
             if (axis == 2) {
@@ -133,14 +133,14 @@ Mesh create_figure(unsigned axis, int np, int win_width, int win_height) {
 
     }
 
-    // Генерация индексов
-    mesh.indices.clear(); // Создание списка индексов
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+    mesh.edgeIndices.clear(); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     for (const auto& poly : mesh.polygons) {
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
             int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
+            mesh.edgeIndices.push_back(idx0);
+            mesh.edgeIndices.push_back(idx1);
         }
     }
     points.clear();
@@ -148,7 +148,7 @@ Mesh create_figure(unsigned axis, int np, int win_width, int win_height) {
 }
 
 
-// Поворот точки вокруг оси
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
 Point3 rotatePoint(const Point3& point, const Point3& axis, float angle) {
     Point3 normalizedAxis = axis.normalize();
     float cosAngle = std::cos(angle);
@@ -159,14 +159,14 @@ Point3 rotatePoint(const Point3& point, const Point3& axis, float angle) {
         normalizedAxis * (normalizedAxis.dot(point) * (1 - cosAngle));
 }
 
-// Построение фигуры вращения
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 Mesh generateRevolvedMesh(const Point3& axis, unsigned int np) {
     Mesh mesh;
 
-    // Шаг угла
+    // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
     float angle_step = 2 * M_PI / np;
 
-    // Генерация вершин
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
     for (unsigned int i = 0; i <= np; ++i) {
         float cur_angle = angle_step * i;
         for (const auto& point : points) {
@@ -174,27 +174,19 @@ Mesh generateRevolvedMesh(const Point3& axis, unsigned int np) {
         }
     }
 
-    // Генерация полигонов
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     for (size_t i = 0; i < np; i++) {
         for (size_t j = 0; j < points.size() - 1; j++) {
             int current = i * points.size() + j;
             int next = (i + 1) * points.size() + j;
 
-            // Формируем два треугольника на каждой паре соседних сегментов
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             mesh.polygons.push_back({ { current, next, current + 1 } });
             mesh.polygons.push_back({ { current + 1, next, next + 1 } });
         }
     }
 
-    mesh.indices.clear(); // Создание списка индексов
-    for (const auto& poly : mesh.polygons) {
-        for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-            int idx0 = poly.vertex_indices[i];
-            int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.indices.push_back(idx0);
-            mesh.indices.push_back(idx1);
-        }
-    }
+    mesh.init_edges_faces();
 
     return mesh;
 
@@ -216,11 +208,11 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
 	ImGui::Text("Set the axis of rotation");
 
     ImGui::PushItemWidth(50);
-    ImGui::InputFloat("x", &axis.x);
+    ImGui::InputFloat("X", &axis.x);
     ImGui::SameLine();
-    ImGui::InputFloat("y", &axis.y);
+    ImGui::InputFloat("Y", &axis.y);
     ImGui::SameLine();
-    ImGui::InputFloat("z", &axis.z);
+    ImGui::InputFloat("Z", &axis.z);
     ImGui::PopItemWidth();
 
 	ImGui::Separator();
@@ -233,7 +225,7 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh)
 		is_not_all_points = true;
 	}
 
-    if (ImGui::Button("Cencel")) {
+    if (ImGui::Button("Cancel")) {
         is_shown = false;
         points.clear();
     }
