@@ -33,7 +33,7 @@ Mesh loadOBJ(const std::string& path) {
             // Координаты текстур
             float u, v;
             ss >> u >> v;
-            temp_texcoords.push_back({u, v});
+            temp_texcoords.push_back({u, v, 0.0f});
         } else if (prefix == "vn") {
             // Нормали
             float x, y, z;
@@ -78,24 +78,15 @@ Mesh loadOBJ(const std::string& path) {
 
     // Устанавливаем вершины
     mesh.vertices = temp_vertices;
-    mesh.textureCoords = temp_texcoords;
 
     // Создание списка индексов для отрисовки линий
-    mesh.faceIndices.clear();
-    mesh.edgeIndices.clear();
+    mesh.indices.clear();
     for (const auto& poly : mesh.polygons) {
-        // Create edge indices
         for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
             int idx0 = poly.vertex_indices[i];
             int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-            mesh.edgeIndices.push_back(idx0);
-            mesh.edgeIndices.push_back(idx1);
-        }
-        // Create face indices (triangulate the polygon)
-        for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
-            mesh.faceIndices.push_back(poly.vertex_indices[0]);
-            mesh.faceIndices.push_back(poly.vertex_indices[i]);
-            mesh.faceIndices.push_back(poly.vertex_indices[i + 1]);
+            mesh.indices.push_back(idx0);
+            mesh.indices.push_back(idx1);
         }
     }
 

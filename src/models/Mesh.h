@@ -1,5 +1,4 @@
-﻿// Mesh.h
-#pragma once
+﻿#pragma once
 #include<vector>
 #include<cmath>
 
@@ -15,10 +14,6 @@ struct Point3 { // Структура для представления точк
 
     Point3 operator-(const Point3& other) const {
         return { x - other.x, y - other.y, z - other.z };
-    }
-
-    Point3 operator-() const {
-        return { -x, -y, -z };
     }
 
     Point3 operator*(float scalar) const {
@@ -49,38 +44,22 @@ struct Point3 { // Структура для представления точк
     }
 };
 
-struct TextureCoord {
-    float u, v;
-};
-
 struct Polygon3 { // Структура полигона
     std::vector<int> vertex_indices;
     std::vector<int> texture_indices;
     std::vector<int> normal_indices;
 };
 
-struct Mesh {
+struct TextureCoord {
+    float u, v, w;
+};
+
+struct VertexNormal {
+    float x, y, z;
+};
+
+struct Mesh { // Меш
     std::vector<Point3> vertices;
     std::vector<Polygon3> polygons;
-    std::vector<TextureCoord> textureCoords;
-    std::vector<unsigned int> faceIndices; // Indices for drawing faces
-    std::vector<unsigned int> edgeIndices; // Indices for drawing edges
-
-    void init_edges_faces() {
-        faceIndices.clear();
-        edgeIndices.clear();
-        for (const auto& poly : polygons) {
-            for (size_t i = 0; i < poly.vertex_indices.size(); ++i) {
-                int idx0 = poly.vertex_indices[i];
-                int idx1 = poly.vertex_indices[(i + 1) % poly.vertex_indices.size()];
-                edgeIndices.push_back(idx0);
-                edgeIndices.push_back(idx1);
-            }
-            for (size_t i = 1; i + 1 < poly.vertex_indices.size(); ++i) {
-                faceIndices.push_back(poly.vertex_indices[0]);
-                faceIndices.push_back(poly.vertex_indices[i]);
-                faceIndices.push_back(poly.vertex_indices[i + 1]);
-            }
-        }
-    }
-};
+    std::vector<unsigned int> indices;
+}; // Индексы для отрисовки
