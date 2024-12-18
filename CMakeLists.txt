@@ -41,6 +41,8 @@ add_executable(
 		src/utils/load_obj.h
 		src/utils/save_obj.h
 		src/main.cpp
+		src/views/light_tools.h
+		src/views/light_tools.cpp
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw glad)

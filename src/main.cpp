@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <chrono>
 #include <iostream>
 #include "Mesh.h"
 #include "Matrix4x4.h"
@@ -14,6 +15,7 @@
 #include "save_obj.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#include"light_tools.h"
 
 GLuint CompileShader(GLenum type, const std::string& source);
 
@@ -116,6 +118,7 @@ int main() {
     glViewport(0, 0, screenWidth, screenHeight);
 
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
+    glEnable(GL_CULL_FACE); //включение отсечения нелицевых граней
 
     Mesh mesh = loadOBJ("../assets/dodecahedron.obj");
     Mesh cameraMesh = loadOBJ("../assets/camera.obj");
@@ -212,6 +215,34 @@ void main() {
 }
     )";
 
+
+    std::string vertexLightShaderSource = R"(
+#version 410 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aColor;
+
+uniform mat4 uMVP;
+
+out vec4 ourColor;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+    ourColor = aColor;
+}
+    )";
+
+    std::string fragmentLightShaderSource = R"(
+#version 410 core
+out vec4 FragColor;  
+in vec4 ourColor;
+  
+void main()
+{
+    FragColor = ourColor;
+}
+)";
+
+
     GLuint vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource);
     GLuint fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
 
@@ -232,13 +263,16 @@ void main() {
     glDeleteShader(fragmentShader);
 
     bool is_tools_shown = true;
-    bool is_camera_shown = true;
-    bool is_camera_tools_shown = true;
+    bool is_camera_shown = false;
+    bool is_camera_tools_shown = false;
     bool is_surface_tools_shown = false;
     bool is_rf_creator_shown = false;
     static int meshNum = 4;
     bool CCTVStandby = true;
     bool isFacesShown = true;
+    bool is_light_tools_shown = false;
+    bool is_light = false;
+    
 
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP");
@@ -329,6 +363,7 @@ void main() {
             if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
             if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
             if (ImGui::MenuItem("Show Faces", NULL, isFacesShown)) { isFacesShown = !isFacesShown; }
+            if (ImGui::MenuItem("Light tools", NULL, is_light_tools_shown)) { is_light_tools_shown = !is_light_tools_shown; }
             ImGui::EndMainMenuBar();
         }
 
@@ -339,6 +374,14 @@ void main() {
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, mesh);
             updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
+        }
+        if (is_light_tools_shown) {
+            create_light_tools(is_light_tools_shown, mesh, is_light);
+        }
+
+        if (is_light) {
+            light_eval(mesh);
+            updateMeshBuffers(VBO, faceVAO, faceEBO, edgeVAO, edgeEBO, mesh);
         }
 
         make_affine_transforms(model, mesh);
@@ -623,11 +666,11 @@ void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
+    if(ImGui::GetIO().WantCaptureMouse)
+        ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+    else if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         mouse_callback(window, xpos, ypos);
     }
-    // Передача события в ImGui
-    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
 }
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);

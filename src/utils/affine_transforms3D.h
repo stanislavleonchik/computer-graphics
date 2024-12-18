@@ -4,6 +4,8 @@
 #include <cmath>
 #include "imgui.h"
 #define _USE_MATH_DEFINES
+#include <math.h>
+
 
 static float translation[3] = {0.0f, 0.0f, 0.0f};
 static float rotation[3] = {0.0f, 0.0f, 0.0f};
