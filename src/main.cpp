@@ -152,7 +152,7 @@ int main() {
 
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
 
-    Mesh mesh = loadOBJ("../assets/dodecahedron.obj");
+    Mesh mesh = loadOBJ("../assets/cube.obj");
     Mesh cameraMesh = loadOBJ("../assets/camera.obj");
     mesh.init_edges_faces();
     cameraMesh.init_edges_faces();
@@ -300,8 +300,8 @@ void main() {
     glDeleteShader(fragmentShader);
 
     bool is_tools_shown = true;
-    bool is_camera_shown = true;
-    bool is_camera_tools_shown = true;
+    bool is_camera_shown = false;
+    bool is_camera_tools_shown = false;
     bool is_surface_tools_shown = false;
     bool is_rf_creator_shown = false;
     static int meshNum = 4;

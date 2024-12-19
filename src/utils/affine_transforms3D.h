@@ -5,7 +5,7 @@
 #include "imgui.h"
 #define _USE_MATH_DEFINES
 
-static float translation[3] = {0.0f, 0.0f, 0.0f};
+static float translation[3] = {0.0f, 0.0f, 2.0f};
 static float rotation[3] = {0.0f, 0.0f, 0.0f};
 static float scaling[3] = {1.0f, 1.0f, 1.0f};
 
@@ -13,7 +13,7 @@ static bool reflectXY = false;
 static bool reflectXZ = false;
 static bool reflectYZ = false;
 
-float globalScale = 1.0f;
+float globalScale = 0.3f;
 Point3 figureCenter;
 
 size_t axis = 0;
