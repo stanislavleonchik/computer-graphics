@@ -1,3 +1,4 @@
+/*
 #include "rotation_figure_creator.h"
 #include "imgui.h"
 #include "imgui/backends/imgui_impl_glfw.h"
@@ -242,3 +243,4 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh) {
 
 	ImGui::End();
 }
+*/
