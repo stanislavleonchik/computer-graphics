@@ -41,6 +41,7 @@ add_executable(
 		src/utils/load_obj.h
 		src/utils/save_obj.h
 		src/main.cpp
+		external/tiny/tiny_obj_loader.h
 )
 
 target_link_libraries(computer-graphics OpenGL::GL glfw glad)

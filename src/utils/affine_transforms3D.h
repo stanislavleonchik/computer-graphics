@@ -1,3 +1,4 @@
+/*
 #pragma once
 #include "Mesh.h"
 #include "Matrix4x4.h"
@@ -305,3 +306,4 @@ void create_affine_tools(bool& is_shown) {
 
     ImGui::End(); // Завершение работы окна ImGui
 }
+*/
