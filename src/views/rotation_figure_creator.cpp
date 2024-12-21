@@ -193,8 +193,8 @@ Mesh generateRevolvedMesh(const Point3& axis, unsigned int np) {
 }
 
 void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh) {
-	static Point3 axis;
-	static int np = 3;
+    static Point3 axis{ 0, 1, 0 };
+	static int np = 20;
 	ImGui::Begin("Rotation figure creator");
 	
     if (is_not_all_points) {
@@ -235,7 +235,7 @@ void rf_tools(bool& is_shown, GLFWwindow* window, Mesh& mesh) {
         glfwGetWindowSize(window, &width, &height);
         for (auto& p : points) {
             p.x = (6.0f * static_cast<float>(p.x) / width) - 3.0f;
-            p.y = 3.0f - (6.0f * static_cast<float>(p.y) / height);
+            p.y = 2.0f - (4.0f * static_cast<float>(p.y) / height);
         }
         mesh = generateRevolvedMesh(axis, np);
         is_shown = false;

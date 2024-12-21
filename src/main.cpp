@@ -72,6 +72,9 @@ void setup_imgui(GLFWwindow* window);
 void show_camera_object_tools(bool& is_camera_tools_shown);
 void ModelsView(Mesh& mesh, int& meshNum);
 void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh);
+void updateMeshBuffersIllum(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh);
+
+Light light_model;
 
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
@@ -119,6 +122,8 @@ int main() {
 
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
     glEnable(GL_CULL_FACE); //включение отсечения нелицевых граней
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
 
     Mesh mesh = loadOBJ("../assets/dodecahedron.obj");
     Mesh cameraMesh = loadOBJ("../assets/camera.obj");
@@ -146,9 +151,9 @@ int main() {
     // Set up face VAO
     glBindVertexArray(faceVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), mesh.vertices.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), mesh.faceIndices.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
@@ -191,6 +196,7 @@ int main() {
     std::string vertexShaderSource = R"(
 #version 410 core
 layout(location = 0) in vec3 aPos;
+layout(location = 0) in vec3 normal;
 
 uniform mat4 uMVP;
 
@@ -217,29 +223,67 @@ void main() {
 
 
     std::string vertexLightShaderSource = R"(
-#version 410 core
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec4 aColor;
+#version 330 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
 
-uniform mat4 uMVP;
+out vec3 Normal;
+out vec3 FragPos;
 
-out vec4 ourColor;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
-void main() {
-    gl_Position = uMVP * vec4(aPos, 1.0);
-    ourColor = aColor;
+void main()
+{
+    gl_Position = projection * view *  model * vec4(position, 1.0f);
+    FragPos = vec3(model * vec4(position, 1.0f));
+    Normal = mat3(transpose(inverse(model))) * normal;  
 }
     )";
 
     std::string fragmentLightShaderSource = R"(
-#version 410 core
-out vec4 FragColor;  
-in vec4 ourColor;
+#version 330 core
+out vec4 color;
+
+in vec3 FragPos;  
+in vec3 Normal;  
   
+uniform vec3 lightPos; 
+uniform vec3 viewPos;
+uniform vec3 lightColor;
+uniform vec3 objectColor;
+
 void main()
 {
-    FragColor = ourColor;
-}
+    // Ambient
+    float ambientStrength = 0.1f;
+    vec3 ambient = ambientStrength * lightColor;
+  	
+    // Diffuse 
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(lightPos - FragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    if (diff > 0.95f) diff = 1.0f;
+    else if (diff > 0.5f) diff = 0.7f;
+    else if (diff > 0.25f) diff = 0.4f;
+    else diff = 0.1f;
+    vec3 diffuse = diff * lightColor;
+    
+    // Specular
+    float specularStrength = 0.5f;
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, norm);  
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+    if (spec > 0.95f) spec = 1.0f;
+    else if (spec > 0.5f) spec = 0.7f;
+    else if (spec > 0.25f) spec = 0.4f;
+    else spec = 0.0f;
+    vec3 specular = specularStrength * spec * lightColor;  
+        
+    vec3 result = (ambient + diffuse + specular) * objectColor;
+    color = vec4(result, 1.0f);
+} 
 )";
 
 
@@ -262,6 +306,25 @@ void main()
     glDeleteShader(vertexShader); // Удаление шейдеров, они больше не нужны
     glDeleteShader(fragmentShader);
 
+    //шейдеры для света
+    GLuint vertexShaderIllum = CompileShader(GL_VERTEX_SHADER, vertexLightShaderSource);
+    GLuint fragmentShaderIllum = CompileShader(GL_FRAGMENT_SHADER, fragmentLightShaderSource);
+    GLuint shaderProgramIllum = glCreateProgram(); // Создание шейдерной программы
+    glAttachShader(shaderProgramIllum, vertexShaderIllum);
+    glAttachShader(shaderProgramIllum, fragmentShaderIllum);
+    glLinkProgram(shaderProgramIllum);
+
+    glGetProgramiv(shaderProgramIllum, GL_LINK_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetProgramInfoLog(shaderProgramIllum, 512, nullptr, infoLog);
+        std::cerr << "Ошибка линковки шейдерной программы: " << infoLog << std::endl;
+    }
+
+    glDeleteShader(vertexShaderIllum); // Удаление шейдеров, они больше не нужны
+    glDeleteShader(fragmentShaderIllum);
+
+
     bool is_tools_shown = true;
     bool is_camera_shown = false;
     bool is_camera_tools_shown = false;
@@ -277,11 +340,22 @@ void main()
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP");
     GLint colorLoc = glGetUniformLocation(shaderProgram, "color");
-    GLint useUniformColorLoc = glGetUniformLocation(shaderProgram, "useUniformColor");
+    GLint useUniformColorLoc = glGetUniformLocation(shaderProgram, "useUniformColor"); 
+
+    GLint modelLocIllum = glGetUniformLocation(shaderProgramIllum, "model");
+    GLint viewLocIllum = glGetUniformLocation(shaderProgramIllum, "view");
+    GLint projLocIllum = glGetUniformLocation(shaderProgramIllum, "projection");
+    GLint lightPosLocIllum = glGetUniformLocation(shaderProgramIllum, "lightPos");
+    GLint viewPosLocIllum = glGetUniformLocation(shaderProgramIllum, "viewPos");
+    GLint lightColorLocIllum = glGetUniformLocation(shaderProgramIllum, "lightColor");
+    GLint objectColorLocIllum = glGetUniformLocation(shaderProgramIllum, "objectColor");
+    Light light_model;
+    mesh.compute_vertex_normal();
+
     /// Основной цикл
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); /// Очистка буфера цвета и глубины
-        glUseProgram(shaderProgram); /// Используем шейдерную программу
+        
 
         glfwPollEvents(); /// Обработка событий
 
@@ -307,7 +381,6 @@ void main()
             CCTVStandby = true;           // Возвращение в standby
         }
 
-        make_affine_transforms(model, mesh);
         make_affine_transforms(cameraModel, cameraMesh);
 
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -323,7 +396,7 @@ void main()
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Save")) {
-                    std::string savePath = "../assets/saved_mesh.obj";
+                    std::string savePath = "assets/saved_mesh.obj";
                     Mesh transformedMesh = mesh;
                     for (auto& vertex : transformedMesh.vertices) {
                         vertex = model * vertex;
@@ -339,27 +412,31 @@ void main()
                     std::string modelFilePath;
                     std::cin >> modelFilePath;
                     mesh = loadOBJ(modelFilePath);
-                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                    glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
-                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
+                    mesh.compute_vertex_normal();
+                    mesh.init_edges_faces();
+                    updateMeshBuffers(VBO, faceVAO, faceEBO, edgeVAO, edgeEBO, mesh);
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Model")) {
-                ModelsView(mesh, meshNum);
 
-                if (!mesh.vertices.empty()) {
-                    mesh.init_edges_faces();
-                    updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
-                }
+                int old_meshNum = meshNum;
+                ModelsView(mesh, meshNum);
                 ImGui::EndMenu();
+                if (meshNum != old_meshNum) {
+                    mesh.compute_vertex_normal();
+                    mesh.init_edges_faces();
+                    updateMeshBuffers(VBO, faceVAO, faceEBO, edgeVAO, edgeEBO, mesh);
+                }
             }
             if (ImGui::MenuItem("Show Tools", NULL, is_tools_shown == 1)) { is_tools_shown = !is_tools_shown; }
             if (ImGui::MenuItem("Camera", NULL, is_camera_shown == 1)) { is_camera_shown = !is_camera_shown; }
             if (ImGui::MenuItem("Camera Tools", NULL, is_camera_tools_shown == 1)) { is_camera_tools_shown = !is_camera_tools_shown; }
             if (ImGui::MenuItem("Surface Tools", NULL, is_surface_tools_shown)) { is_surface_tools_shown = !is_surface_tools_shown; }
-            if (ImGui::MenuItem("Rotation figure", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; }
+            if (ImGui::MenuItem("Rotation figure", NULL, is_rf_creator_shown)) { 
+                is_rf_creator_shown = !is_rf_creator_shown;
+                mesh = Mesh();
+            }
             if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
             if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
             if (ImGui::MenuItem("Show Faces", NULL, isFacesShown)) { isFacesShown = !isFacesShown; }
@@ -373,18 +450,18 @@ void main()
         }
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, mesh);
-            updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
+            if(!is_rf_creator_shown)
+                updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
         }
         if (is_light_tools_shown) {
-            create_light_tools(is_light_tools_shown, mesh, is_light);
+            create_light_tools(is_light_tools_shown, mesh, is_light);   
         }
+        
+        make_affine_transforms(model, mesh);
 
         if (is_light) {
-            light_eval(mesh);
-            updateMeshBuffers(VBO, faceVAO, faceEBO, edgeVAO, edgeEBO, mesh);
+            updateMeshBuffersIllum(VBO, faceVAO, faceEBO, edgeVAO, edgeEBO, mesh);
         }
-
-        make_affine_transforms(model, mesh);
 
         Matrix4x4 projection;
         if (currentProjection == 0) {
@@ -420,26 +497,49 @@ void main()
 
         ImGui::Render();
 
-        glUseProgram(shaderProgram);
+        if (!is_light) {
+            glUseProgram(shaderProgram); 
+            /// Set the MVP matrix
+            glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
+            /// Draw Faces with Gradient Color
+            if (isFacesShown) {
+                glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
+                glBindVertexArray(faceVAO);
+                glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+            }
+            /// Draw Edges in White Color
+            glUniform1i(useUniformColorLoc, isFacesShown); // Use uniform color
+            glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 1.0f); // Set color to white
+            glBindVertexArray(edgeVAO);
+            glDrawElements(GL_LINES, mesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
 
-        /// Set the MVP matrix
-        glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
+        }
+        else {
 
-        /// Draw Faces with Gradient Color
-        if (isFacesShown) {
-            glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
-            glBindVertexArray(faceVAO);
-            glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
+            //передаём данные в шейдер для рендеринга света
+            glUseProgram(shaderProgramIllum);
+            glUniformMatrix4fv(modelLocIllum, 1, GL_FALSE, model.m);
+            glUniformMatrix4fv(viewLocIllum, 1, GL_FALSE, view.m);
+            glUniformMatrix4fv(projLocIllum, 1, GL_FALSE, projection.m);
+            glUniform3f(lightPosLocIllum, Light::position.x, Light::position.y, Light::position.z);
+            glUniform3f(viewPosLocIllum, cameraPos.x, cameraPos.y, cameraPos.z);
+            glUniform3f(lightColorLocIllum, Light::light_color.x, Light::light_color.y, Light::light_color.z);
+            glUniform3f(objectColorLocIllum, Light::object_color.x, Light::object_color.y, Light::object_color.z);
+            
+            if (isFacesShown) {
+                glBindVertexArray(faceVAO);
+                glDrawElements(GL_TRIANGLES, mesh.faceIndices.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+            }
+            glBindVertexArray(edgeVAO);
+            glDrawElements(GL_LINES, mesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
         }
-        /// Draw Edges in White Color
-        glUniform1i(useUniformColorLoc, isFacesShown); // Use uniform color
-        glUniform4f(colorLoc, 0.0f, 0.0f, 0.0f, 1.0f); // Set color to white
-        glBindVertexArray(edgeVAO);
-        glDrawElements(GL_LINES, mesh.edgeIndices.size(), GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
 
         if (is_camera_shown) {
+            glUseProgram(shaderProgram);
             // Матрица для объекта камеры
             // Применим трансформации, заданные в camObjPos, camObjRot, camObjScale
             cameraModel = cameraModel * Matrix4x4::translate(Point3(camObjPos.x, camObjPos.y, camObjPos.z));
@@ -496,6 +596,8 @@ GLuint CompileShader(GLenum type, const std::string& source) { // Функция
     return shader;
 }
 void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh) {
+    if (mesh.vertices.size() == 0 || mesh.faceIndices.size() == 0 || mesh.edgeIndices.size() == 0)
+        return;
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
     /// Update faceEBO
@@ -507,6 +609,48 @@ void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVA
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, edgeEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.edgeIndices.size() * sizeof(unsigned int), &mesh.edgeIndices[0], GL_STATIC_DRAW);
 }
+
+void updateMeshBuffersIllum(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh) {
+    if (mesh.vertices.size() == 0 || mesh.normals.size() == 0)
+        return;
+
+    std::vector<float> v_with_n(6 * mesh.vertices.size());
+    for (size_t i = 0; i < mesh.vertices.size(); i++)
+    {
+        v_with_n[6 * i + 0] = mesh.vertices[i].x;
+        v_with_n[6 * i + 1] = mesh.vertices[i].y;
+        v_with_n[6 * i + 2] = mesh.vertices[i].z;
+        v_with_n[6 * i + 3] = mesh.normals[i].x;
+        v_with_n[6 * i + 4] = mesh.normals[i].y;
+        v_with_n[6 * i + 5] = mesh.normals[i].z;
+    }
+
+    // Привязка VBO и обновление данных
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, v_with_n.size() * sizeof(float), v_with_n.data(), GL_DYNAMIC_DRAW);
+
+    // Настройка атрибутов для faceVAO
+    glBindVertexArray(faceVAO);
+    // Атрибут позиции (location = 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // Атрибут цвета (location = 1)
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    // Настройка атрибутов для edgeVAO
+    glBindVertexArray(edgeVAO);
+    // Атрибут позиции (location = 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // Атрибут цвета (location = 1)
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    // Развязка VAO
+    glBindVertexArray(0);
+}
+
 void ModelsView(Mesh& mesh, int& meshNum) {
     if (ImGui::MenuItem("Tetrahedron", NULL, meshNum == 0)) { meshNum = 0; mesh = loadOBJ("../assets/tetrahedron.obj"); }
     if (ImGui::MenuItem("Hexahedron", NULL, meshNum == 1)) { meshNum = 1; mesh = loadOBJ("../assets/diamond.obj"); }
