@@ -13,6 +13,8 @@
 #include "load_obj.h"
 #include "save_obj.h"
 #define STB_IMAGE_IMPLEMENTATION
+#include <chrono>
+
 #include "stb/stb_image.h"
 
 GLuint CompileShader(GLenum type, const std::string& source);
@@ -70,6 +72,17 @@ void setup_imgui(GLFWwindow* window);
 void show_camera_object_tools(bool& is_camera_tools_shown);
 void ModelsView(Mesh& mesh, int& meshNum);
 void updateMeshBuffers(GLint VBO, GLuint faceVAO, GLuint faceEBO, GLuint  edgeVAO, GLuint edgeEBO, Mesh& mesh);
+
+void show_light_controls(Point3& lightPos) {
+    ImGui::Begin("Light Controls");
+
+    // Слайдеры для изменения позиции света
+    ImGui::SliderFloat("Light X", &lightPos.x, -50.0f, 50.0f, "X: %.1f");
+    ImGui::SliderFloat("Light Y", &lightPos.y, -50.0f, 50.0f, "Y: %.1f");
+    ImGui::SliderFloat("Light Z", &lightPos.z, -50.0f, 50.0f, "Z: %.1f");
+
+    ImGui::End();
+}
 
 int main() {
     if (!glfwInit()) { // Инициализация GLFW
@@ -148,6 +161,8 @@ int main() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.faceIndices.size() * sizeof(unsigned int), &mesh.faceIndices[0], GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)nullptr);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Point3), (void*)(sizeof(Point3)));
+    glEnableVertexAttribArray(1);
 
     // Set up edge VAO
     glBindVertexArray(edgeVAO);
@@ -188,27 +203,33 @@ int main() {
     std::string vertexShaderSource = R"(
 #version 410 core
 layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+
+out vec3 vertexColor;
 
 uniform mat4 uMVP;
+uniform vec3 lightPos;
+uniform vec3 lightColor;
+uniform vec3 viewPos;
+uniform vec3 objectColor;
 
 void main() {
+    vec3 norm = normalize(aNormal);
+    vec3 lightDir = normalize(lightPos - aPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vertexColor = objectColor * lightColor * diff; // Ламбертово освещение
     gl_Position = uMVP * vec4(aPos, 1.0);
 }
     )";
 
     std::string fragmentShaderSource = R"(
 #version 410 core
-
-uniform vec4 color;
-uniform bool useUniformColor;
+in vec3 vertexColor;
 
 out vec4 FragColor;
+
 void main() {
-    if (useUniformColor) {
-        FragColor = color;
-    } else {
-        FragColor = vec4(gl_FragCoord.x / 2800.0, gl_FragCoord.y / 1600.0, 1600.0, 1.0);
-    }
+    FragColor = vec4(vertexColor, 1.0);
 }
     )";
 
@@ -239,11 +260,18 @@ void main() {
     static int meshNum = 4;
     bool CCTVStandby = true;
     bool isFacesShown = true;
+    bool shoLightControls = false;
 
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     GLint mvpLoc = glGetUniformLocation(shaderProgram, "uMVP");
+    GLint lightPosLoc = glGetUniformLocation(shaderProgram, "lightPos");
+    GLint lightColorLoc = glGetUniformLocation(shaderProgram, "lightColor");
+    GLint objectColorLoc = glGetUniformLocation(shaderProgram, "objectColor");
     GLint colorLoc = glGetUniformLocation(shaderProgram, "color");
     GLint useUniformColorLoc = glGetUniformLocation(shaderProgram, "useUniformColor");
+    Point3 lightPos(0.0f, 15.0f, 0.0f);
+    Point3 lightColor(1.0f, 1.0f, 1.0f);
+    Point3 objectColor(0.1f, 0.1f, 0.9f);
     /// Основной цикл
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); /// Очистка буфера цвета и глубины
@@ -329,6 +357,7 @@ void main() {
             if (ImGui::MenuItem("Perspective", NULL, currentProjection == 0)) { currentProjection = 0; }
             if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
             if (ImGui::MenuItem("Show Faces", NULL, isFacesShown)) { isFacesShown = !isFacesShown; }
+            if (ImGui::MenuItem("Show Light Controls", NULL, shoLightControls)) { shoLightControls = !shoLightControls; }
             ImGui::EndMainMenuBar();
         }
 
@@ -339,6 +368,9 @@ void main() {
         if (is_rf_creator_shown) {
             rf_tools(is_rf_creator_shown, window, mesh);
             updateMeshBuffers(VBO, faceVAO, faceEBO,  edgeVAO, edgeEBO, mesh);
+        }
+        if (shoLightControls) {
+            show_light_controls(lightPos);
         }
 
         make_affine_transforms(model, mesh);
@@ -381,7 +413,9 @@ void main() {
 
         /// Set the MVP matrix
         glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
-
+        glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
+        glUniform3f(lightColorLoc, lightColor.x, lightColor.y, lightColor.z);
+        glUniform3f(objectColorLoc, objectColor.x, objectColor.y, objectColor.z);
         /// Draw Faces with Gradient Color
         if (isFacesShown) {
             glUniform1i(useUniformColorLoc, GL_FALSE); // Use gradient color
