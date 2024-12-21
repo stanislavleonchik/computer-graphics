@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <unordered_set>
 #include <sstream>
 #include <map>
 #include "Mesh.h"
@@ -17,6 +18,9 @@
 #include "load_obj.h"
 #include "save_obj.h"
 
+#include <thread>
+#include <chrono>
+
 GLuint CompileShader(GLenum type, const std::string& source);
 
 double lastX, lastY; // Глобальные переменные для управления камерой
@@ -24,7 +28,7 @@ float yaw = -90.0f;
 float pitch = 0.0f;
 bool firstMouse = true;
 
-Point3 cameraPos(0.0f, 0.0f, 3.0f);
+Point3 cameraPos(0.0f, 0.0f, 2.0f);
 Point3 cameraFront(0.0f, 0.0f, -1.0f);
 Point3 cameraUp(0.0f, 1.0f, 0.0f);
 
@@ -51,7 +55,325 @@ void char_callback(GLFWwindow* window, unsigned int codepoint);
 
 void setup_imgui(GLFWwindow* window);
 
+
+struct Point4 {
+    float x, y, z, w;
+    Point4() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
+    // Конструктор из Point3
+    Point4(const Point3& p, float w_val = 1.0f) : x(p.x), y(p.y), z(p.z), w(w_val) {}
+
+    // Преобразование с матрицей 4x4
+    Point4 operator*(const Matrix4x4& mat) const {
+        Point4 result;
+        result.x = mat.m[0][0] * x + mat.m[0][1] * y + mat.m[0][2] * z + mat.m[0][3] * w;
+        result.y = mat.m[1][0] * x + mat.m[1][1] * y + mat.m[1][2] * z + mat.m[1][3] * w;
+        result.z = mat.m[2][0] * x + mat.m[2][1] * y + mat.m[2][2] * z + mat.m[2][3] * w;
+        result.w = mat.m[3][0] * x + mat.m[3][1] * y + mat.m[3][2] * z + mat.m[3][3] * w;
+        return result;
+    }
+};
+Point4 Matrix4x4::operator*(const Point4& p) const {
+    Point4 result;
+    result.x = m[0][0] * p.x + m[0][1] * p.y + m[0][2] * p.z + m[0][3] * p.w;
+    result.y = m[1][0] * p.x + m[1][1] * p.y + m[1][2] * p.z + m[1][3] * p.w;
+    result.z = m[2][0] * p.x + m[2][1] * p.y + m[2][2] * p.z + m[2][3] * p.w;
+    result.w = m[3][0] * p.x + m[3][1] * p.y + m[3][2] * p.z + m[3][3] * p.w;
+    return result;
+}
+// Структура для хранения цвета
+struct Color {
+    unsigned char r, g, b;
+    Color(unsigned char r_=255, unsigned char g_=255, unsigned char b_=255) : r(r_), g(g_), b(b_) {}
+};
+
+
+
+// Функция для проверки, лежит ли точка внутри треугольника (в экранных координатах)
+bool isPointInTriangle(float px, float py, const Point3& p0, const Point3& p1, const Point3& p2) {
+    // Входные точки уже в экранных координатах
+    float x0 = p0.x, y0 = p0.y;
+    float x1 = p1.x, y1 = p1.y;
+    float x2 = p2.x, y2 = p2.y;
+
+    // Векторные произведения
+    float cross1 = (x1 - x0) * (py - y0) - (y1 - y0) * (px - x0);
+    float cross2 = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
+    float cross3 = (x0 - x2) * (py - y2) - (y0 - y2) * (px - x2);
+
+    // Проверка, если все произведения имеют одинаковый знак, точка внутри треугольника
+    bool has_neg = (cross1 < 0) || (cross2 < 0) || (cross3 < 0);
+    bool has_pos = (cross1 > 0) || (cross2 > 0) || (cross3 > 0);
+
+    return !(has_neg && has_pos);
+}
+
+// Функция для вычисления глубины точки в треугольнике с использованием барицентрических координат
+float calculateDepth(float px, float py, const Point3& p0, const Point3& p1, const Point3& p2) {
+    // Проецируем треугольник на экранные 2D координаты
+    float x0 = p0.x, y0 = p0.y, z0 = p0.z;
+    float x1 = p1.x, y1 = p1.y, z1 = p1.z;
+    float x2 = p2.x, y2 = p2.y, z2 = p2.z;
+
+    // Вычисляем векторные произведения для нахождения барицентрических координат
+    float denominator = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
+    if (fabs(denominator) < 1e-5f) return std::numeric_limits<float>::max(); // Избегаем деления на ноль
+
+    float alpha = ((y1 - y2) * (px - x2) + (x2 - x1) * (py - y2)) / denominator;
+    float beta = ((y2 - y0) * (px - x2) + (x0 - x2) * (py - y2)) / denominator;
+    float gamma = 1.0f - alpha - beta;
+
+    // Проверка барицентрических координат
+    if (alpha < 0 || beta < 0 || gamma < 0) return std::numeric_limits<float>::max();
+
+    // Вычисление глубины (z) с использованием барицентрических координат
+    float depth = alpha * z0 + beta * z1 + gamma * z2;
+
+    return depth;
+}
+
+// Функция для растеризации треугольника и обновления буферов
+void rasterizeTriangle(
+    const Point3& p0,
+    const Point3& p1,
+    const Point3& p2,
+    std::vector<float>& depthBuffer,
+    std::vector<Color>& colorBuffer,
+    int screenWidth,
+    int screenHeight,
+    const Color& polygonColor
+) {
+    // Определяем ограничивающий прямоугольник треугольника
+    float minX = std::min({ p0.x, p1.x, p2.x });
+    float maxX = std::max({ p0.x, p1.x, p2.x });
+    float minY = std::min({ p0.y, p1.y, p2.y });
+    float maxY = std::max({ p0.y, p1.y, p2.y });
+
+    // Ограничиваем координаты экрана
+    int startX = std::max(0, static_cast<int>(std::floor(minX)));
+    int endX = std::min(screenWidth - 1, static_cast<int>(std::ceil(maxX)));
+    int startY = std::max(0, static_cast<int>(std::floor(minY)));
+    int endY = std::min(screenHeight - 1, static_cast<int>(std::ceil(maxY)));
+
+    // Проходим по пикселям в пределах ограничивающего прямоугольника
+    for (int y = startY; y <= endY; ++y) {
+        for (int x = startX; x <= endX; ++x) {
+            if (isPointInTriangle(static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f, p0, p1, p2)) {
+                float z = calculateDepth(static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f, p0, p1, p2);
+                int idx = y * screenWidth + x;
+                if (z < depthBuffer[idx]) {
+                    depthBuffer[idx] = z;
+                    colorBuffer[idx] = polygonColor;
+                }
+            }
+        }
+    }
+}
+
+Color getDarkerColor(const Color& previousColor, int darknessFactor = 10) {
+    int r = std::max(0, previousColor.r - darknessFactor);
+    int g = std::max(0, previousColor.g - darknessFactor);
+    int b = std::max(0, previousColor.b - darknessFactor);
+
+    return Color(r, g, b);
+}
+
+
+
+
+
+
+
+
+
+
+
+// Функция для проверки, лежит ли точка внутри треугольника
+bool isPointInTriangle(int px, int py, const Point3& p0, const Point3& p1, const Point3& p2) {
+    // Входные точки уже в экранных координатах
+    float x0 = p0.x, y0 = p0.y;
+    float x1 = p1.x, y1 = p1.y;
+    float x2 = p2.x, y2 = p2.y;
+
+    // Расчет направлений для треугольника
+    float dX0 = px - x0, dY0 = py - y0;
+    float dX1 = px - x1, dY1 = py - y1;
+    float dX2 = px - x2, dY2 = py - y2;
+
+    // Векторные произведения
+    float crossProduct1 = (x1 - x0) * dY0 - (y1 - y0) * dX0;
+    float crossProduct2 = (x2 - x1) * dY1 - (y2 - y1) * dX1;
+    float crossProduct3 = (x0 - x2) * dY2 - (y0 - y2) * dX2;
+
+    // Проверка, если все произведения имеют одинаковый знак, точка внутри треугольника
+    return (crossProduct1 >= 0 && crossProduct2 >= 0 && crossProduct3 >= 0) ||
+           (crossProduct1 <= 0 && crossProduct2 <= 0 && crossProduct3 <= 0);
+}
+
+// Функция для вычисления глубины точки в треугольнике с использованием барицентрических координат
+float calculateDepth(int px, int py, const Point3& p0, const Point3& p1, const Point3& p2) {
+    // Проецируем треугольник на экранные 2D координаты
+    float x0 = p0.x, y0 = p0.y, z0 = p0.z;
+    float x1 = p1.x, y1 = p1.y, z1 = p1.z;
+    float x2 = p2.x, y2 = p2.y, z2 = p2.z;
+
+    // Вычисляем векторные произведения для нахождения барицентрических координат
+    float denominator = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
+    if (denominator == 0.0f) return std::numeric_limits<float>::max(); // Избегаем деления на ноль
+
+    float alpha = ((y1 - y2) * (px - x2) + (x2 - x1) * (py - y2)) / denominator;
+    float beta = ((y2 - y0) * (px - x2) + (x0 - x2) * (py - y2)) / denominator;
+    float gamma = 1.0f - alpha - beta;
+
+    // Вычисление глубины (z) с использованием барицентрических координат
+    float depth = alpha * z0 + beta * z1 + gamma * z2;
+
+    return depth;
+}
+
+void rasterizeTriangle(
+    const Point3& p0,
+    const Point3& p1,
+    const Point3& p2,
+    std::vector<float>& depthBuffer,
+    int screenWidth,
+    int screenHeight
+) {
+    // Предполагается, что p0, p1, p2 уже в экранных координатах с z как глубиной
+
+    // Растеризация треугольника
+    for (int y = 0; y < screenHeight; ++y) {
+        for (int x = 0; x < screenWidth; ++x) {
+            if (isPointInTriangle(x, y, p0, p1, p2)) {
+                float z = calculateDepth(x, y, p0, p1, p2);
+                if (z < depthBuffer[y * screenWidth + x]) {
+                    depthBuffer[y * screenWidth + x] = z;  // Обновляем глубину пикселя
+                }
+            }
+        }
+    }
+}
+
+
+void displayImage(const std::vector<Color>& colorBuffer, int screenWidth, int screenHeight) {
+    // Получаем указатель на текущий draw list в переднем плане
+    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+
+    // Создаем новое окно с указанным размером
+    ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_Always);
+    if (ImGui::Begin("New Image Window", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)) {
+
+        // Позиция окна на экране
+        ImVec2 windowPos = ImGui::GetWindowPos();
+        float w = windowPos.x;
+        float h = windowPos.y;
+
+        // Отображаем изображение, закрашивая каждый пиксель
+        for (int y = 0; y < screenHeight; ++y) {
+            for (int x = 0; x < screenWidth; ++x) {
+                // Получаем цвет пикселя из буфера
+                const Color& color = colorBuffer[y * screenWidth + x];
+
+                // Используем ImGui для рисования прямоугольников с полученным цветом
+                draw_list->AddRectFilled(ImVec2(w + x, h + y), ImVec2(w + x + 1, h + y + 1), IM_COL32(color.r, color.g, color.b, 255));
+            }
+        }
+
+    }
+    ImGui::End();
+}
+
+
+
+void renderManually(
+    const Mesh& mesh,
+    const Matrix4x4& model,
+    const Matrix4x4& view,
+    const Matrix4x4& projection,
+    int screenWidth,
+    int screenHeight
+) {
+    // Инициализируем буферы
+    std::vector<float> depthBuffer(screenWidth * screenHeight, std::numeric_limits<float>::max());
+    std::vector<Color> colorBuffer(screenWidth * screenHeight, Color(255, 255, 255)); // Белый фон
+
+    // Комбинированная матрица преобразования
+    Matrix4x4 mvp = projection * view * model;
+    Color currentColor(200, 200, 200);
+    // Обход полигонов
+    for (const auto& poly : mesh.polygons) {
+        if (poly.vertex_indices.size() < 3) continue; // Пропуск некорректных полигонов
+
+        // Преобразование вектора нормали для проверки видимости
+        Point4 v0 = model * mesh.vertices[poly.vertex_indices[0]];
+        Point4 v1 = model * mesh.vertices[poly.vertex_indices[1]];
+        Point4 v2 = model * mesh.vertices[poly.vertex_indices[2]];
+
+        // Преобразование Point4 в Point3
+        Point3 p0(v0.x, v0.y, v0.z);
+        Point3 p1(v1.x, v1.y, v1.z);
+        Point3 p2(v2.x, v2.y, v2.z);
+
+
+        // Преобразование всех вершин полигона
+        std::vector<Point3> screenVertices;
+        for (int index : poly.vertex_indices) {
+            Point4 vertex = mvp * Point4(mesh.vertices[index]);
+            if (vertex.w == 0) continue; // Избегаем деления на ноль
+            vertex.x /= vertex.w;
+            vertex.y /= vertex.w;
+            vertex.z /= vertex.w;
+
+            // Преобразование в экранные координаты
+            float screenX = (vertex.x * 0.5f + 0.5f) * screenWidth;
+            float screenY = (1.0f - (vertex.y * 0.5f + 0.5f)) * screenHeight;
+            screenVertices.emplace_back(screenX, screenY, vertex.z);
+        }
+
+        // Растеризация треугольников
+        for (size_t i = 1; i < screenVertices.size() - 1; ++i) {
+            rasterizeTriangle(
+                screenVertices[0],
+                screenVertices[i],
+                screenVertices[i + 1],
+                depthBuffer,
+                colorBuffer,
+                screenWidth,
+                screenHeight,
+                currentColor
+            );
+            currentColor = getDarkerColor(currentColor); // Обновляем цвет для следующего полигона
+
+        }
+    }
+
+    // Для отрисовки изображения вызовите функцию отображения
+    displayImage(colorBuffer, screenWidth, screenHeight);
+}
+
+
+void openNewWindow(int width, int height) {
+    GLFWwindow* newWindow = glfwCreateWindow(width, height, "White Canvas", nullptr, nullptr);
+    if (!newWindow) {
+        std::cerr << "Не удалось создать окно" << std::endl;
+        return;
+    }
+    glfwMakeContextCurrent(newWindow);
+
+    while (!glfwWindowShouldClose(newWindow)) {
+        glClear(GL_COLOR_BUFFER_BIT); // Очистка экрана
+
+        // Настройка цвета фона (белый)
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glfwSwapBuffers(newWindow);
+        glfwPollEvents();
+    }
+
+    glfwDestroyWindow(newWindow);
+}
+
 int main() {
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
     if (!glfwInit()) { // Инициализация GLFW
         return -1;
     }
@@ -97,7 +419,8 @@ int main() {
 
     glEnable(GL_DEPTH_TEST); // Включение глубинного теста
 
-    Mesh mesh = createDodecahedron(); // Переменная для текущего меша
+    //Mesh mesh = createDodecahedron(); // Переменная для текущего меша
+    Mesh mesh = createIcosahedron(); // Переменная для текущего меша
     SurfaceParams params(
         [](float x, float y) { return std::sin(x) * std::cos(y); }, // Функция z = sin(x) * cos(y)
         -3.14f, 3.14f,                                            // Диапазон по x
@@ -176,15 +499,19 @@ int main() {
     bool is_tools_shown = true;
     bool is_surface_tools_shown = false;
     bool is_rf_creator_shown = false;
-    static int currentPolyhedron = 4;
+    bool zBuffShow = false;
+    static int currentPolyhedron = 3;
     const std::map<std::string, bool> polyhedronNames = {{"Tetrahedron", false}, {"Hexahedron", false},
                                                          {"Octahedron", false}, {"Icosahedron", false},
                                                          {"Dodecahedron", false} };
-    
+
     static int currentProjection = 0; // 0 - Перспективная, 1 - Ортографическая
     const char* projectionNames[] = { "Perspective", "Axonometric" };
 
+
     while (!glfwWindowShouldClose(window)) { // Основной цикл
+
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Очистка буфера цвета и глубины
 
         glfwPollEvents(); // Обработка событий
@@ -203,6 +530,8 @@ int main() {
         }
         make_affine_transforms(model, mesh);
         make_affine_transforms(model, rf_figure);
+
+
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -232,6 +561,7 @@ int main() {
                     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
                     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
                 }
+
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("View")) {
@@ -243,6 +573,8 @@ int main() {
                     if (ImGui::MenuItem("Axonometric", NULL, currentProjection == 1)) { currentProjection = 1; }
                     ImGui::EndMenu();
                 }
+                if (ImGui::MenuItem("Z Buffer show", NULL, zBuffShow)) { zBuffShow = !zBuffShow; }
+
                 if (ImGui::MenuItem("Tetrahedron", NULL, currentPolyhedron == 0)) { currentPolyhedron = 0; }
                 if (ImGui::MenuItem("Hexahedron", NULL, currentPolyhedron == 1)) { currentPolyhedron = 1; }
                 if (ImGui::MenuItem("Octahedron", NULL, currentPolyhedron == 2)) { currentPolyhedron = 2; }
@@ -251,6 +583,8 @@ int main() {
                 if (ImGui::MenuItem("Create figure of rotation", NULL, is_rf_creator_shown)) { is_rf_creator_shown = !is_rf_creator_shown; currentPolyhedron = 5; rf_figure = Mesh(); }
 
                 if (ImGui::MenuItem("Surface", NULL, currentPolyhedron == 6)) { currentPolyhedron = 6; }
+
+
                 switch (currentPolyhedron) {
                     case 0: mesh = createTetrahedron(); break;
                     case 1: mesh = createHexahedron(); break;
@@ -261,19 +595,14 @@ int main() {
 
                     case 6: mesh = createSurfaceSegment(params); break;
                 }
-                switch (currentPolyhedron) {
-                    case 0: mesh = createTetrahedron(); break;
-                    case 1: mesh = createHexahedron(); break;
-
-                }
 
                 if (!mesh.vertices.empty()) {
                     glBindBuffer(GL_ARRAY_BUFFER, VBO);
                     glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(Point3), &mesh.vertices[0], GL_STATIC_DRAW);
-
                     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
                     glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
                 }
+
 
                 ImGui::EndMenu();
             }
@@ -293,9 +622,6 @@ int main() {
         }
 
 
-
-        make_affine_transforms(model, mesh);
-
         Matrix4x4 projection;
         if (currentProjection == 0) {
             projection = Matrix4x4::perspective(45.0f * M_PI / 180.0f, (float)screenWidth / screenHeight, nearPlaneDistance, 100.0f);
@@ -311,9 +637,18 @@ int main() {
 
             projection = Matrix4x4::orthographic(left, right, bottom, top, near1, far1);
         }
+
+        make_affine_transforms(model, mesh);
+
         Matrix4x4 view = Matrix4x4::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
         Matrix4x4 mvp = model * projection * view; // Формирование общей матрицы MVP
+        if(zBuffShow) {
+            renderManually(mesh, model, view, projection, screenWidth/2, screenHeight/2);
+        }
+
+
+
         ImGui::Render();
 
 

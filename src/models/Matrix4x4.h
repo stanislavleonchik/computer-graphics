@@ -1,7 +1,10 @@
-﻿#pragma once
+﻿
+#pragma once
 
+struct Point4; // Forward declaration
 struct Matrix4x4 { // Матрица 4x4 для трансформаций
     float m[4][4]{};
+
 
     Matrix4x4() {
         for (int i = 0; i < 4; ++i) // Инициализация единичной матрицей
@@ -179,4 +182,7 @@ struct Matrix4x4 { // Матрица 4x4 для трансформаций
 
         return result;
     }
+Point4 operator*(const Point4& p) const;
 };
+
+

@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿
+#pragma once
+
 #include<vector>
 #include<cmath>
 
@@ -59,3 +61,5 @@ struct Mesh { // Меш
     std::vector<Polygon3> polygons;
     std::vector<unsigned int> indices;
 }; // Индексы для отрисовки
+
+
