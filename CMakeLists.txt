@@ -10,6 +10,7 @@ add_library(glad external/glad/src/glad.c)
 include_directories(glad external/glad/include)
 
 add_subdirectory(external/glfw)
+add_subdirectory(external/glm)
 include_directories(external/glfw/include)
 
 include_directories(${OPENGL_INCLUDE_DIRS})
@@ -34,14 +35,9 @@ add_executable(
         external/stb/stb_image.h
         external/stb/stb_image_write.h
 
-		src/models/Mesh.h
-		src/models/Matrix4x4.h
 		src/views/rotation_figure_creator.h
 		src/views/rotation_figure_creator.cpp
-		src/utils/load_obj.h
-		src/utils/save_obj.h
 		src/main.cpp
-		external/tiny/tiny_obj_loader.h
 )
 
-target_link_libraries(computer-graphics OpenGL::GL glfw glad)
+target_link_libraries(computer-graphics OpenGL::GL glfw glad glm::glm)
