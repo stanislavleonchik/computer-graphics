@@ -11,6 +11,9 @@
 #include <fstream>
 #include <sstream>
 #include <map>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 GLuint CompileShader(GLenum type, const std::string& source);
 struct Point3 {
@@ -515,7 +518,7 @@ int main() {
 
         uniform bool useVertexColor;
         uniform bool hasTexture;
-        uniform vec3 objectColor; // New uniform for object color
+        uniform vec3 objectColor; // Новый uniform для цвета объекта
 
         void main() {
             if (isLight) {
@@ -523,34 +526,48 @@ int main() {
                 return;
             }
 
-            // Ambient lighting
-            vec3 ambient = 0.1 * vec3(1.0, 1.0, 1.0);
+            // Амбиентное освещение
+            vec3 ambient = 0.2 * vec3(1.0, 1.0, 1.0); // Увеличено с 0.1 до 0.2
 
-            // Diffuse lighting
+            // Направление света и расстояние до него
             vec3 norm = normalize(Normal);
             vec3 lightDir = normalize(lightPos - FragPos);
+            float distance = length(lightPos - FragPos);
+
+            // Затухание
+            float constant = 1.0;
+            float linear = 0.09;
+            float quadratic = 0.032;
+            float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+
+            // Диффузное освещение
             float diff = max(dot(norm, lightDir), 0.0);
             vec3 diffuse = diff * vec3(1.0, 1.0, 1.0);
 
-            // Specular lighting
+            // Спекулярное освещение
             float specularStrength = 0.5;
             vec3 viewDir = normalize(viewPos - FragPos);
             vec3 reflectDir = reflect(-lightDir, norm);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
             vec3 specular = specularStrength * spec * vec3(1.0, 1.0, 1.0);
 
-            // Texture
+            // Применение затухания к диффузному и спекулярному компонентам
+            diffuse *= attenuation;
+            specular *= attenuation;
+
+            // Текстура
             vec3 textureColor = hasTexture ? texture(texture1, TexCoord).rgb : vec3(1.0, 1.0, 1.0);
 
-            // Object color
+            // Цвет объекта
             vec3 finalColor = objectColor;
             if(useVertexColor) {
                 finalColor *= VertexColor;
             }
 
-            // Combine color with texture
+            // Комбинирование цвета с текстурой
             finalColor *= textureColor;
 
+            // Итоговый цвет
             vec3 result = (ambient + diffuse + specular) * finalColor;
             FragColor = vec4(result, 1.0);
         }
