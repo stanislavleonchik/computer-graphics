@@ -1,12 +1,8 @@
-// main.cpp
-
 #include "imgui_impl_opengl3_loader.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_glfw.h"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
 #include <vector>
 #include <iostream>
 #include <string>
@@ -16,12 +12,8 @@
 #include <memory>
 #include <unordered_map>
 #include <array>
-#include <algorithm>
-#include <chrono>
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -45,7 +37,7 @@ GLuint CompileShader(GLenum type, const std::string& source) {
 
 struct ShaderProgram {
     GLuint ID;
-    // Uniform locations for main shader
+    // Uniform locations для основного шейдера
     GLint uMVP;
     GLint uModel;
     GLint isLight;
@@ -62,12 +54,12 @@ struct ShaderProgram {
     // Uniforms for per-face reflections (only for room)
     GLint faceReflectionFlags;
 
-    // Uniform locations for depth shader
+    // Uniforms for depth shader (устанавливаются при создании depthShader, если нужно)
     GLint depth_lightSpaceMatrix;
     GLint depth_model;
 
     ShaderProgram(const std::string& vertexSrc, const std::string& fragmentSrc) {
-        GLuint vertexShader = CompileShader(GL_VERTEX_SHADER, vertexSrc);
+        GLuint vertexShader   = CompileShader(GL_VERTEX_SHADER, vertexSrc);
         GLuint fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentSrc);
 
         ID = glCreateProgram();
@@ -87,20 +79,23 @@ struct ShaderProgram {
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
 
-        // Cache uniform locations
-        uMVP = glGetUniformLocation(ID, "uMVP");
-        uModel = glGetUniformLocation(ID, "uModel");
-        isLight = glGetUniformLocation(ID, "isLight");
-        emissiveColor = glGetUniformLocation(ID, "emissiveColor");
-        useVertexColor = glGetUniformLocation(ID, "useVertexColor");
-        objectColor = glGetUniformLocation(ID, "objectColor");
-        hasTexture = glGetUniformLocation(ID, "hasTexture");
-        lightPos = glGetUniformLocation(ID, "lightPos");
-        viewPos = glGetUniformLocation(ID, "viewPos");
-        texture1 = glGetUniformLocation(ID, "texture1");
-        enableReflection = glGetUniformLocation(ID, "enableReflection");
-        cubeMap = glGetUniformLocation(ID, "cubeMap");
+        // Кэшируем локации uniform-переменных (если они есть в шейдере)
+        uMVP            = glGetUniformLocation(ID, "uMVP");
+        uModel          = glGetUniformLocation(ID, "uModel");
+        isLight         = glGetUniformLocation(ID, "isLight");
+        emissiveColor   = glGetUniformLocation(ID, "emissiveColor");
+        useVertexColor  = glGetUniformLocation(ID, "useVertexColor");
+        objectColor     = glGetUniformLocation(ID, "objectColor");
+        hasTexture      = glGetUniformLocation(ID, "hasTexture");
+        lightPos        = glGetUniformLocation(ID, "lightPos");
+        viewPos         = glGetUniformLocation(ID, "viewPos");
+        texture1        = glGetUniformLocation(ID, "texture1");
+        enableReflection= glGetUniformLocation(ID, "enableReflection");
+        cubeMap         = glGetUniformLocation(ID, "cubeMap");
         faceReflectionFlags = glGetUniformLocation(ID, "faceReflectionFlags");
+        // Эти два для depthShader (могут быть -1, если не найдены)
+        depth_lightSpaceMatrix = glGetUniformLocation(ID, "lightSpaceMatrix");
+        depth_model            = glGetUniformLocation(ID, "model");
     }
 
     void use() const {
@@ -132,8 +127,11 @@ struct ShaderProgram {
         setInt(name, value ? 1 : 0);
     }
 
-    // Method to set faceReflectionFlags
+    // Метод для установки faceReflectionFlags
     void setFaceReflectionFlags(const std::array<bool, 6>& flags) const {
+        // Если faceReflectionFlags == -1, значит в шейдере нет такого uniform
+        if (faceReflectionFlags < 0) return;
+
         int intFlags[6];
         for (int i = 0; i < 6; ++i) {
             intFlags[i] = flags[i] ? 1 : 0;
@@ -141,8 +139,11 @@ struct ShaderProgram {
         glUniform1iv(faceReflectionFlags, 6, intFlags);
     }
 
-    // Method to set all reflection flags to true (for non-room objects)
+    // Метод для включения отражений на всех 6 сторонах (для не-комнаты)
     void setAllReflectionFlags() const {
+        // Если faceReflectionFlags == -1, значит в шейдере нет такого uniform
+        if (faceReflectionFlags < 0) return;
+
         int intFlags[6] = {1, 1, 1, 1, 1, 1};
         glUniform1iv(faceReflectionFlags, 6, intFlags);
     }
@@ -160,23 +161,21 @@ public:
         glGenTextures(1, &textureID);
 
         int width, height, nrComponents;
-        stbi_set_flip_vertically_on_load(true); // Flip based on model
+        stbi_set_flip_vertically_on_load(true); // Для стандартных 2D-текстур
         unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrComponents, 0);
         if (data) {
             GLenum format;
-            if (nrComponents == 1)
-                format = GL_RED;
-            else if (nrComponents == 3)
-                format = GL_RGB;
-            else if (nrComponents == 4)
-                format = GL_RGBA;
+            if (nrComponents == 1)      format = GL_RED;
+            else if (nrComponents == 3) format = GL_RGB;
+            else if (nrComponents == 4) format = GL_RGBA;
+            else                       format = GL_RGB; // fallback
 
             glBindTexture(GL_TEXTURE_2D, textureID);
             glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
             glGenerateMipmap(GL_TEXTURE_2D);
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -226,7 +225,7 @@ struct Vertex {
 class Transform {
 public:
     glm::vec3 position;
-    glm::vec3 rotation; // In degrees
+    glm::vec3 rotation; // В градусах
     glm::vec3 scale;
 
     Transform() : position(0.0f), rotation(0.0f), scale(1.0f) {}
@@ -259,19 +258,21 @@ public:
     bool isLight = false;
     glm::vec3 emissiveColor = glm::vec3(1.0f);
     Material material;
-    bool enableReflection = false; // Whether reflections are enabled for this object
-    bool isRoom = false; // Flag indicating if this object is the room
-    std::array<bool, 6> faceReflectionFlags = { true, true, true, true, true, true }; // Only for room
+    bool enableReflection = false; // отражения включены/выключены
+    bool isRoom = false; // если это «комната» (room)
+    std::array<bool, 6> faceReflectionFlags = { true, true, true, true, true, true }; // только для комнаты
 
     Model(const Mesh& m, const Material& mat = Material()) : mesh(m), material(mat) {
         setupBuffers();
     }
 
-    // Constructor: load from .obj
-    Model(const std::string& objPath, const Material& mat = Material(), bool roomFlag = false) : material(mat), isRoom(roomFlag) {
+    // Конструктор: загрузка из .obj
+    Model(const std::string& objPath, const Material& mat = Material(), bool roomFlag = false)
+            : material(mat), isRoom(roomFlag)
+    {
         mesh = loadOBJ(objPath);
 
-        // Extract filename without path and extension
+        // Извлекаем имя файла (без пути и расширения)
         size_t slashPos = objPath.find_last_of("/\\");
         size_t dotPos   = objPath.find_last_of(".");
         if (slashPos == std::string::npos) slashPos = 0; else slashPos++;
@@ -287,7 +288,7 @@ public:
         glDeleteBuffers(1, &EBO);
     }
 
-    // Method to draw with the main shader
+    // Рисуем модель основным шейдером (который умеет и тени, и отражения)
     void draw(const ShaderProgram& shader,
               const glm::mat4& view,
               const glm::mat4& projection,
@@ -298,41 +299,47 @@ public:
         glm::mat4 modelMatrix = transform.getMatrix();
         glm::mat4 mvp = projection * view * modelMatrix;
 
-        // Pass matrices to shader
-        glUniformMatrix4fv(shader.uMVP, 1, GL_FALSE, glm::value_ptr(mvp));
-        glUniformMatrix4fv(shader.uModel, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+        // Передаём матрицы в шейдер
+        if (shader.uMVP >= 0)   glUniformMatrix4fv(shader.uMVP,   1, GL_FALSE, glm::value_ptr(mvp));
+        if (shader.uModel >= 0) glUniformMatrix4fv(shader.uModel, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-        glUniform1i(shader.isLight, isLight ? 1 : 0);
-        glUniform3fv(shader.emissiveColor, 1, glm::value_ptr(emissiveColor));
+        if (shader.isLight >= 0)      glUniform1i(shader.isLight, isLight ? 1 : 0);
+        if (shader.emissiveColor >= 0)glUniform3fv(shader.emissiveColor, 1, glm::value_ptr(emissiveColor));
 
         bool hasVertexColors = !mesh.colors.empty();
-        glUniform1i(shader.useVertexColor, hasVertexColors ? 1 : 0);
+        if (shader.useVertexColor >= 0) glUniform1i(shader.useVertexColor, hasVertexColors ? 1 : 0);
 
-        glUniform3fv(shader.objectColor, 1, glm::value_ptr(material.color));
+        if (shader.objectColor >= 0)   glUniform3fv(shader.objectColor, 1, glm::value_ptr(material.color));
 
-        if (material.textureID != 0) {
+        // Текстура
+        if (material.textureID != 0 && shader.hasTexture >= 0) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, material.textureID);
-            glUniform1i(shader.texture1, 0);
+            if (shader.texture1 >= 0) glUniform1i(shader.texture1, 0);
             glUniform1i(shader.hasTexture, 1);
         }
         else {
-            glUniform1i(shader.hasTexture, 0);
+            if (shader.hasTexture >= 0) glUniform1i(shader.hasTexture, 0);
         }
 
-        // Bind the dynamic cube map for reflections
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
-        glUniform1i(shader.cubeMap, 2);
+        // Кубкарта
+        if (shader.cubeMap >= 0) {
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
+            glUniform1i(shader.cubeMap, 2);
+        }
+        // Включаем/выключаем отражения
+        if (shader.enableReflection >= 0) {
+            glUniform1i(shader.enableReflection, enableReflection ? 1 : 0);
+        }
 
-        glUniform1i(shader.enableReflection, enableReflection ? 1 : 0);
-
-        // Set faceReflectionFlags for the room or all flags for other reflective objects
-        if (isRoom) {
+        // Если это комната – устанавливаем флаги отражения на каждую грань
+        // Иначе (просто объект с enableReflection) – включаем все грани
+        if (isRoom && shader.faceReflectionFlags >= 0) {
             shader.setFaceReflectionFlags(faceReflectionFlags);
         }
-        else if (enableReflection) {
-            shader.setAllReflectionFlags(); // Full reflection
+        else if (enableReflection && shader.faceReflectionFlags >= 0) {
+            shader.setAllReflectionFlags();
         }
 
         glBindVertexArray(VAO);
@@ -340,21 +347,25 @@ public:
         glBindVertexArray(0);
     }
 
-    // Method to draw for depth shader
-    void drawDepth(const ShaderProgram& depthShader, const glm::mat4& lightSpaceMatrix) const
-    {
+    // Метод для рендера в depth-проходе (тени)
+    void drawDepth(const ShaderProgram& depthShader, const glm::mat4& lightSpaceMatrix) const {
         depthShader.use();
 
-        glm::mat4 modelMatrix = transform.getMatrix();
-        depthShader.setMat4("model", modelMatrix);
-        depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        // Если в depthShader есть соответствующие uniform-переменные:
+        if (depthShader.depth_model >= 0) {
+            glm::mat4 modelMatrix = transform.getMatrix();
+            glUniformMatrix4fv(depthShader.depth_model, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+        }
+        if (depthShader.depth_lightSpaceMatrix >= 0) {
+            glUniformMatrix4fv(depthShader.depth_lightSpaceMatrix, 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
+        }
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
     }
 
-    // Load .obj file
+    // Загрузка .obj (упрощённая)
     Mesh loadOBJ(const std::string& path) {
         Mesh mesh;
         std::vector<glm::vec3> temp_vertices;
@@ -396,7 +407,7 @@ public:
                     std::stringstream vertexSS(vertexStr);
                     Vertex vertex = {0, 0, 0};
                     vertexSS >> vertex.posIndex;
-                    if (!(vertexSS >> vertex.texIndex)) vertex.texIndex = 0;
+                    if (!(vertexSS >> vertex.texIndex))  vertex.texIndex  = 0;
                     if (!(vertexSS >> vertex.normIndex)) vertex.normIndex = 0;
                     faceVertices.push_back(vertex);
                 }
@@ -417,18 +428,19 @@ public:
                         else
                             mesh.normals.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
 
-                        mesh.colors.push_back(glm::vec3(1.0f)); // Default white
+                        mesh.colors.push_back(glm::vec3(1.0f)); // по умолчанию белый
                         mesh.indices.push_back((unsigned int)(mesh.vertices.size() - 1));
                     }
                 }
             }
-            // Ignore other prefixes
+            // Остальные префиксы игнорируем
         }
 
         file.close();
         return mesh;
     }
 
+    // Создание и настройка буферов VAO/VBO/EBO
     void setupBuffers() {
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
@@ -436,7 +448,7 @@ public:
 
         glBindVertexArray(VAO);
 
-        // Interleaved Data: position(3) + normal(3) + texCoords(2) + color(3) = 11 floats
+        // Interleaved: position(3) + normal(3) + texCoords(2) + color(3) = 11 floats
         std::vector<float> interleavedData;
         interleavedData.reserve(mesh.vertices.size() * 11);
 
@@ -498,7 +510,7 @@ public:
     void addModel(const std::shared_ptr<Model>& model) {
         int counter = 0;
         for(auto& ml: models) {
-            if (ml->name == model->name)
+            if (ml->name.find(model->name) != std::string::npos)
                 counter++;
         }
         if (counter)
@@ -506,7 +518,7 @@ public:
         models.push_back(model);
     }
 
-    // Draw all models with the main shader
+    // Отрисовать все модели основным шейдером (с отражениями/тенями и т.д.)
     void drawAll(const ShaderProgram& shader,
                  const glm::mat4& view,
                  const glm::mat4& projection,
@@ -517,18 +529,20 @@ public:
         }
     }
 
-    // Draw all models for depth shader (when rendering depth)
+    // Отрисовать все модели в depth-проход (для построения карты теней)
     void drawAllDepth(const ShaderProgram& depthShader,
                       const glm::mat4& lightSpaceMatrix) const
     {
+        // Обычно мы не рисуем зеркально-отражающие объекты в depth pass
+        // (или же можем рисовать, но это вопрос дизайна теней; в данном коде исключают отражающиеся)
         for (const auto& model : models) {
-            if (!model->enableReflection) // Do not render reflective objects in depth pass
+            if (!model->enableReflection)
                 model->drawDepth(depthShader, lightSpaceMatrix);
         }
     }
 };
 
-// --------------------- Global Variables for Scene/Camera ---------------------
+// --------------------- Глобальные переменные камеры ---------------------
 Scene scene;
 glm::vec3 cameraPos(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
@@ -540,7 +554,7 @@ float yaw = -90.0f;
 float pitch = 0.0f;
 bool firstMouse = true;
 
-// --------------------- Function Declarations ---------------------
+// --------------------- Объявление функций ---------------------
 void processInput(GLFWwindow* window, float deltaTime);
 void processCursorToggle(GLFWwindow* window);
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
@@ -555,12 +569,12 @@ void setup_style(ImGuiStyle& style, ImGuiIO& io);
 
 // --------------------- main() ---------------------
 int main() {
-    // 1. Initialize GLFW
+    // 1. Инициализация GLFW
     if (!glfwInit()) {
         return -1;
     }
 
-    // 2. Configure OpenGL context
+    // 2. Настройка контекста OpenGL
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -568,7 +582,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    // Create a window in fullscreen
+    // Создаём окно в полноэкранном режиме
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "Lemotech 3D", nullptr, nullptr);
@@ -578,28 +592,27 @@ int main() {
         return -1;
     }
 
-    // Set context
+    // Контекст
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    // Initialize GLAD
+    // Инициализация GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
-    // Initialize ImGui
+    // Инициализация ImGui
     setup_imgui(window);
 
-    // Set callbacks
+    // Калбэки
     glfwSetCursorPosCallback(window, cursor_pos_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCharCallback(window, char_callback);
 
-    // --------------------- Shaders for Main Rendering (with shadows and reflections) ---------------------
-    // Vertex Shader
+    // --------------------- Шейдер для основного рендера (отражения, тени) ---------------------
     std::string vertexShaderSource = R"(
         #version 330 core
         layout(location = 0) in vec3 aPos;
@@ -610,44 +623,45 @@ int main() {
         uniform mat4 uMVP;
         uniform mat4 uModel;
 
-        // For shadow calculation
+        // Для расчёта теней:
         uniform mat4 lightSpaceMatrix;
 
         out vec3 FragPos;
         out vec3 Normal;
         out vec2 TexCoord;
         out vec3 VertexColor;
-        out vec4 FragPosLightSpace; // Position in light's space
-        out vec3 ReflectDir; // Reflection direction
+        out vec4 FragPosLightSpace;
+        out vec3 ReflectDir;
 
-        uniform vec3 viewPos; // Camera position
+        uniform vec3 viewPos; // позиция камеры
 
         void main() {
             gl_Position = uMVP * vec4(aPos, 1.0);
 
-            // World position
+            // мировая позиция
             FragPos = vec3(uModel * vec4(aPos, 1.0));
-            // Normal
+            // нормаль
             Normal = mat3(transpose(inverse(uModel))) * aNormal;
-            // Texture coordinates
+            // UV
             TexCoord = aTexCoord;
-            // Vertex color
+            // цвет вершин
             VertexColor = aColor;
 
-            // Position in light space for shadow mapping
+            // для теней
             FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
 
-            // Calculate reflection direction
+            // вычислим направление отражённого вектора (от камеры к фрагменту)
+            // I — вектор (FragPos - viewPos), но удобнее взять наоборот (viewPos - FragPos),
+            //   смотря как хотим интерпретировать.
+            // Тут берём I = normalize(FragPos - viewPos),
+            // потом reflect(I, N).
             vec3 I = normalize(FragPos - viewPos);
             ReflectDir = reflect(I, normalize(Normal));
         }
     )";
 
-    // Fragment Shader
-    // Includes shadow calculation and reflections from cube map
     std::string fragmentShaderSource = R"(
         #version 330 core
-
         in vec3 FragPos;
         in vec3 Normal;
         in vec2 TexCoord;
@@ -657,7 +671,7 @@ int main() {
 
         out vec4 FragColor;
 
-        // Standard uniforms
+        // стандартные uniform'ы
         uniform vec3 lightPos;
         uniform vec3 viewPos;
         uniform sampler2D texture1;
@@ -669,32 +683,29 @@ int main() {
         uniform bool hasTexture;
         uniform vec3 objectColor;
 
-        // For shadows
+        // тени
         uniform sampler2D shadowMap;
         uniform mat4 lightSpaceMatrix;
 
-        // For reflections
+        // отражения
         uniform bool enableReflection;
         uniform samplerCube cubeMap;
 
-        // For per-face reflections (only for room)
-        uniform bool faceReflectionFlags[6]; // [+X, -X, +Y, -Y, +Z, -Z]
+        // для отражений по граням (только для room)
+        uniform bool faceReflectionFlags[6]; // +X, -X, +Y, -Y, +Z, -Z
 
-        // Shadow calculation function
+        // Простая функция расчёта теней (PCF)
         float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
         {
-            // Perform perspective divide
             vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-            // Transform to [0,1] range
             projCoords = projCoords * 0.5 + 0.5;
 
-            // If outside shadow map, no shadow
+            // за границами shadowMap
             if(projCoords.x < 0.0 || projCoords.x > 1.0 ||
                projCoords.y < 0.0 || projCoords.y > 1.0 ||
                projCoords.z < 0.0 || projCoords.z > 1.0)
                 return 0.0;
 
-            // PCF for soft shadows
             float shadow = 0.0;
             vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
             for(int x = -1; x <= 1; ++x)
@@ -708,56 +719,57 @@ int main() {
                 }
             }
             shadow /= 9.0;
-
             return shadow;
         }
 
         void main() {
-            // If this is a light source, output emissive color
+            // если это «источник света», рисуем просто эмиссивный цвет
             if (isLight) {
                 FragColor = vec4(emissiveColor, 1.0);
                 return;
             }
 
-            // Ambient lighting
+            // ambient
             vec3 ambient = 0.2 * vec3(1.0);
 
-            // Diffuse lighting
+            // diffuse
             vec3 norm = normalize(Normal);
             vec3 lightDir = normalize(lightPos - FragPos);
             float diff = max(dot(norm, lightDir), 0.0);
             vec3 diffuse = diff * vec3(1.0);
 
-            // Specular lighting
+            // specular
             float specularStrength = 0.5;
             vec3 viewDir = normalize(viewPos - FragPos);
             vec3 reflectDirSpec = reflect(-lightDir, norm);
             float spec = pow(max(dot(viewDir, reflectDirSpec), 0.0), 32);
             vec3 specular = specularStrength * spec * vec3(1.0);
 
-            // Attenuation
+            // затухание
             float distance = length(lightPos - FragPos);
             float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * (distance * distance));
             diffuse *= attenuation;
             specular *= attenuation;
 
-            // Calculate shadow
+            // тень
             float shadow = ShadowCalculation(FragPosLightSpace, norm, lightDir);
 
-            // Texture color
+            // цвет текстуры
             vec3 textureColor = hasTexture ? texture(texture1, TexCoord).rgb : vec3(1.0);
 
-            // Object color
+            // итоговый цвет без отражения
             vec3 finalColor = objectColor;
             if(useVertexColor) {
                 finalColor *= VertexColor;
             }
             finalColor *= textureColor;
 
-            // Reflection
-            vec3 reflection = vec3(0.0);
+            // результирующее освещение без учёта отражений
+            vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * finalColor;
+
+            // добавим отражение
             if(enableReflection) {
-                // Check if any faceReflectionFlags are true
+                // Проверим, есть ли какие-то флаги (для комнаты)
                 bool anyFlag = false;
                 for(int i = 0; i < 6; ++i) {
                     if(faceReflectionFlags[i]) {
@@ -766,41 +778,20 @@ int main() {
                     }
                 }
 
-                if(anyFlag) { // If at least one face has reflection enabled
-                    // Determine which face based on normal
-                    int face = -1;
-                    if (abs(Normal.x - 1.0) < 0.1) face = 0; // +X
-                    else if (abs(Normal.x + 1.0) < 0.1) face = 1; // -X
-                    else if (abs(Normal.y - 1.0) < 0.1) face = 2; // +Y
-                    else if (abs(Normal.y + 1.0) < 0.1) face = 3; // -Y
-                    else if (abs(Normal.z - 1.0) < 0.1) face = 4; // +Z
-                    else if (abs(Normal.z + 1.0) < 0.1) face = 5; // -Z
-
-                    if (face != -1 && faceReflectionFlags[face]) {
-                        reflection = texture(cubeMap, ReflectDir).rgb;
-                    }
-                }
-                else {
-                    // If all faces have reflection enabled or it's not a room, sample cube map directly
+                vec3 reflection = vec3(0.0);
                     reflection = texture(cubeMap, ReflectDir).rgb;
-                }
-            }
-
-            // Final lighting with shadows
-            vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * finalColor;
-            // Blend reflection
-            if(enableReflection) {
-                lighting = mix(lighting, reflection, 0.3); // 30% reflection
+                // Смешиваем отражение и основной цвет
+                // (число 0.3 означает «насколько сильно» подмешиваем отражение)
+                lighting = mix(lighting, reflection, 0.3);
             }
 
             FragColor = vec4(lighting, 1.0);
         }
     )";
 
-    // Create the main shader program
     ShaderProgram shaderProgram(vertexShaderSource, fragmentShaderSource);
 
-    // --------------------- Shaders for Depth Rendering (Depth Shader) ---------------------
+    // --------------------- Шейдер для depth pass ---------------------
     std::string depthVertexShaderSource = R"(
         #version 330 core
         layout(location = 0) in vec3 aPos;
@@ -816,83 +807,46 @@ int main() {
 
     std::string depthFragmentShaderSource = R"(
         #version 330 core
-        // Empty fragment shader; depth is automatically written to the depth buffer
-        void main()
-        {
-        }
+        void main(){}
     )";
 
     ShaderProgram depthShader(depthVertexShaderSource, depthFragmentShaderSource);
 
-    // --------------------- Shaders for Cube Map Rendering (Cube Map Shader) ---------------------
-    // Vertex Shader for Cube Map
-    std::string cubeMapVertexShaderSource = R"(
-        #version 330 core
-        layout(location = 0) in vec3 aPos;
-
-        uniform mat4 projection;
-        uniform mat4 view;
-
-        out vec3 WorldPos;
-
-        void main()
-        {
-            WorldPos = aPos;
-            gl_Position = projection * view * vec4(aPos, 1.0);
-        }
-    )";
-
-    // Fragment Shader for Cube Map
-    std::string cubeMapFragmentShaderSource = R"(
-        #version 330 core
-        out vec4 FragColor;
-
-        in vec3 WorldPos;
-
-        uniform vec3 objectColor;
-
-        void main()
-        {
-            FragColor = vec4(objectColor, 1.0);
-        }
-    )";
-
-    ShaderProgram cubeMapShader(cubeMapVertexShaderSource, cubeMapFragmentShaderSource);
-
-    // --------------------- Enable Depth Testing and Face Culling ---------------------
+    // --------------------- Включаем буфер глубины и culling ---------------------
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    // --------------------- Create FBO and Texture for Shadow Mapping ---------------------
+    // --------------------- FBO/Texture для shadow map ---------------------
     const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
     GLuint depthMapFBO;
     glGenFramebuffers(1, &depthMapFBO);
 
-    // Create depth texture for shadow mapping
     GLuint depthMap;
     glGenTextures(1, &depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    // Set texture parameters
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOW_WIDTH, SHADOW_HEIGHT, 0,
+                 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    // Можно GL_CLAMP_TO_BORDER, если хотим жёсткое обрезание теней
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // Attach depth texture to FBO
+
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-    glDrawBuffer(GL_NONE); // No color buffer is drawn to
+    glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // --------------------- Create Dynamic Cube Map ---------------------
+    // --------------------- Создание динамической кубкарты ---------------------
     GLuint dynamicCubeMap;
     glGenTextures(1, &dynamicCubeMap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, dynamicCubeMap);
-    unsigned int cubeMapSize = 512; // Cube map resolution
+    unsigned int cubeMapSize = 512;
     for (unsigned int i = 0; i < 6; ++i) {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, cubeMapSize, cubeMapSize, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
+                     cubeMapSize, cubeMapSize, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -901,7 +855,7 @@ int main() {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
-    // Create FBO and RBO for cube map rendering
+    // FBO/RBO для рендера в кубкарту
     GLuint captureFBO, captureRBO;
     glGenFramebuffers(1, &captureFBO);
     glGenRenderbuffers(1, &captureRBO);
@@ -912,28 +866,24 @@ int main() {
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // --------------------- Load Base Texture (e.g., for room walls) ---------------------
-    GLuint texture;
-
-    // --------------------- Load Models into Scene ---------------------
-    // 1) "Room"
-    std::shared_ptr<Model> room = std::make_shared<Model>("../assets/Room.obj", Material(), true);
+    // --------------------- Загружаем модели ---------------------
+    // 1) Комната
+    auto room = std::make_shared<Model>("../assets/Room.obj", Material(), true);
     room->material.color = glm::vec3(1.0f);
     room->transform.position = glm::vec3(0.0f, 2.35f, 1.0f);
     room->transform.scale = glm::vec3(5.0f, 3.3f, 14.0f);
-    room->enableReflection = true; // Enable reflections for room
+    room->enableReflection = true;
 
-    // Assign colors to room faces
+    // Раскрашиваем стены комнаты (просто пример)
     const glm::vec3 faceColors[6] = {
-            glm::vec3(1.0f, 0.149f, 0.0f), // +X Left wall: Red
-            glm::vec3(0.921f, 0.921f, 0.921f), // -X Right wall: Gray
-            glm::vec3(0.0f, 0.59f, 1.0f),  // +Y Top wall: Blue
-            glm::vec3(0.921f, 0.921f, 0.921f), // -Y Bottom wall: Gray
-            glm::vec3(0.921f, 0.921f, 0.921f), // +Z Front wall: Gray
-            glm::vec3(0.921f, 0.921f, 0.921f)  // -Z Back wall: Gray
+            glm::vec3(1.0f, 0.149f, 0.0f),     // +X
+            glm::vec3(0.921f, 0.921f, 0.921f),// -X
+            glm::vec3(0.0f, 0.59f, 1.0f),      // +Y
+            glm::vec3(0.921f, 0.921f, 0.921f),// -Y
+            glm::vec3(0.921f, 0.921f, 0.921f),// +Z
+            glm::vec3(0.921f, 0.921f, 0.921f) // -Z
     };
-
-    size_t verticesPerFace = 6; // Assuming each face has 6 vertices (2 triangles)
+    size_t verticesPerFace = 6;
     for (size_t face = 0; face < 6; ++face) {
         for (size_t vert = 0; vert < verticesPerFace; ++vert) {
             size_t index = face * verticesPerFace + vert;
@@ -942,200 +892,217 @@ int main() {
             }
         }
     }
-    // Invert normals if necessary (depends on model)
+    // Инвертируем нормали, если нужно
     for (auto& n : room->mesh.normals) {
         n = glm::normalize(n) * -1.0f;
     }
-    // Update buffers after modifying colors and normals
     room->setupBuffers();
     scene.addModel(room);
 
-    // 2) Cubes
-    std::shared_ptr<Model> cubeItem = std::make_shared<Model>("../assets/Cube.obj");
+    // 2) Пара кубов
+    auto cubeItem = std::make_shared<Model>("../assets/Cube.obj");
     cubeItem->transform.position = glm::vec3(1.0f, 0.0f, -3.6f);
     cubeItem->transform.rotation = glm::vec3(0.0f, 8.0f, 0.0f);
     cubeItem->transform.scale    = glm::vec3(0.5f, 0.95f, 0.5f);
-    cubeItem->enableReflection = true; // Enable reflection
+    cubeItem->enableReflection   = true;
     scene.addModel(cubeItem);
 
-    std::shared_ptr<Model> cubeItem2 = std::make_shared<Model>("../assets/Cube.obj");
+    auto cubeItem2 = std::make_shared<Model>("../assets/Cube.obj");
     cubeItem2->transform.position = glm::vec3(-1.0f, -0.45f, -2.6f);
     cubeItem2->transform.rotation = glm::vec3(0.0f, -4.0f, 0.0f);
     cubeItem2->transform.scale    = glm::vec3(0.5f, 0.5f, 0.5f);
-    cubeItem2->enableReflection = true; // Enable reflection
+    cubeItem2->enableReflection   = true;
     scene.addModel(cubeItem2);
 
-    // 3) Sphere
-    std::shared_ptr<Model> sphereItem = std::make_shared<Model>("../assets/Sphere.obj");
+    auto sphereItem = std::make_shared<Model>("../assets/Sphere.obj");
     sphereItem->transform.position = glm::vec3(-3.5f, 0.0f, -3.5f);
-    sphereItem->enableReflection = true; // Enable reflection
+    sphereItem->enableReflection   = true;
     scene.addModel(sphereItem);
 
-    // 4) Light Panel (Emissive)
-    std::shared_ptr<Model> lightPanel = std::make_shared<Model>("../assets/Plane.obj");
+    auto lightPanel = std::make_shared<Model>("../assets/Cube.obj");
     lightPanel->transform.position = glm::vec3(0.0f, 5.6f, -5.0f);
-    lightPanel->transform.scale = glm::vec3(2.0f);
+    lightPanel->transform.scale    = glm::vec3(1.0f, 0.1f, 1.0f);
     lightPanel->transform.rotation = glm::vec3(180.0f, 0.0f, 0.0f);
-    lightPanel->isLight = true;
-    lightPanel->emissiveColor = glm::vec3(1.0f, 1.0f, 0.8f);
+    lightPanel->isLight            = true;
+    lightPanel->emissiveColor      = glm::vec3(0.97f, 0.97f, 0.97f);
     scene.addModel(lightPanel);
 
-    // Light position coincides with lightPanel position (simplified)
+    // Позиция света совпадает с center lightPanel
     glm::vec3 lightPosInWorld = lightPanel->transform.position;
 
-    // --------------------- Main Loop ---------------------
-    // Define capture views for cube map generation
+    // Матрицы «камер» для кубкарты
     std::vector<glm::mat4> captureViews = {
-            glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+            glm::lookAt(glm::vec3(0.0f), glm::vec3(+1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, +1.0f,  0.0f),  glm::vec3(0.0f,  0.0f,  1.0f)),
+            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f,  0.0f),  glm::vec3(0.0f,  0.0f, -1.0f)),
+            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f,  0.0f, +1.0f),  glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f,  0.0f, -1.0f),  glm::vec3(0.0f, -1.0f,  0.0f))
     };
 
     glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);
 
+    // --------------------- Цикл рендера ---------------------
     while (!glfwWindowShouldClose(window)) {
-        // Frame timing
+        // Вычисляем deltaTime
         static auto lastFrameTime = std::chrono::high_resolution_clock::now();
         auto currentFrameTime = std::chrono::high_resolution_clock::now();
         float deltaTime = std::chrono::duration<float>(currentFrameTime - lastFrameTime).count();
         lastFrameTime = currentFrameTime;
 
-        // Poll events and handle input
         glfwPollEvents();
         processCursorToggle(window);
         processInput(window, deltaTime);
 
-        // Update light position if the light panel is movable (optional)
+        // Обновляем позицию света (если нужно)
         lightPosInWorld = lightPanel->transform.position;
 
-        //        1) Generate Dynamic Cube Map
-        // Set viewport to cube map size
+        // ===================== 1) Рендер сцены в кубкарту =====================
         glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
         glViewport(0, 0, cubeMapSize, cubeMapSize);
         glEnable(GL_DEPTH_TEST);
 
-        // Disable reflections for all objects to avoid recursion
-        // Temporarily set enableReflection to false
+        // Сохраняем исходные флаги отражений и отключаем их у всех,
+        // чтобы объекты не «видели» своих же отражений (рекурсия).
         std::vector<bool> originalReflectionFlags;
-        for (const auto& model : scene.models) {
+        originalReflectionFlags.reserve(scene.models.size());
+        for (auto& model : scene.models) {
             originalReflectionFlags.push_back(model->enableReflection);
             if (model->enableReflection) {
                 model->enableReflection = false;
             }
         }
 
-        // Render the scene to each face of the cube map
+        // Для каждой грани кубкарты
         for (unsigned int i = 0; i < 6; ++i) {
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, dynamicCubeMap, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, dynamicCubeMap, 0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            // Set view and projection matrices for cube map face
+            // Вычисляем view и projection для этой грани кубкарты
             glm::mat4 view = captureViews[i];
             glm::mat4 projection = captureProjection;
 
-            // Use cubeMapShader to render the scene
-            cubeMapShader.use();
-            cubeMapShader.setMat4("view", view);
-            cubeMapShader.setMat4("projection", projection);
-            cubeMapShader.setVec3("objectColor", glm::vec3(1.0f)); // Default object color
+            // В качестве «камеры» для окружения выступает точка (0,0,0).
+            // Если вы хотите отражения вокруг конкретного объекта, нужно сместить всё так,
+            // чтобы объект был в (0,0,0). Либо использовать lookAt от конкретной позиции.
+            // Но здесь для простоты центрируем в origin.
 
-            // Render all models (with reflections disabled)
-            for (const auto& model : scene.models) {
-                model->draw(shaderProgram, view, projection, dynamicCubeMap); // Reflections are disabled
+            // Рисуем сцену тем же shaderProgram, но у всех объектов отражения отключены
+            // (для избежания рекурсии).
+            shaderProgram.use();
+            // Т.к. мы можем захотеть тени в окружении, назначим lightSpaceMatrix, lightPos etc.
+            // Но можно и не делать этого, если хотим «упростить» картинку для отражений.
+            // (здесь оставлено для полноты)
+            float near_plane = 1.0f, far_plane = 25.0f;
+            float orthoSize  = 10.0f;
+            glm::mat4 lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, near_plane, far_plane);
+            glm::mat4 lightView       = glm::lookAt(lightPosInWorld, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+            shaderProgram.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+            shaderProgram.setVec3("lightPos", lightPosInWorld);
+            // Камеру берём в (0,0,0)
+            shaderProgram.setVec3("viewPos", glm::vec3(0.0f));
+
+            // Подвязываем shadowMap (если хотим тени в отражении)
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
+            shaderProgram.setInt("shadowMap", 1);
+
+            // Кубкарту для самого себя не привязываем, т.к. отражения отключены.
+
+            // Рисуем все модели:
+            // (объекты просто нарисуются обычным шейдером, но без отражений)
+            for (auto& model : scene.models) {
+                // Временно матрицу модели «сдвигать» не будем,
+                // но если нужно отражать относительно другого центра,
+                // придётся учитывать смещение.
+                glm::mat4 localView = view;
+                glm::mat4 localProj = projection;
+                model->draw(shaderProgram, localView, localProj, /*cubeMap=*/0);
             }
         }
 
-        // Re-enable reflections for reflective objects
-        size_t idx = 0;
-        for (const auto& model : scene.models) {
-            if (model->enableReflection) {
-                model->enableReflection = originalReflectionFlags[idx];
-            }
-            ++idx;
+        // Возвращаем отражения на место
+        for (size_t i = 0; i < scene.models.size(); ++i) {
+            scene.models[i]->enableReflection = originalReflectionFlags[i];
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        //        2) Generate Shadow Map
-        // Define light's orthographic projection matrix
+        // ===================== 2) Генерация shadow map =====================
         float near_plane = 1.0f, far_plane = 25.0f;
         float orthoSize = 10.0f;
         glm::mat4 lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, near_plane, far_plane);
-        glm::mat4 lightView       = glm::lookAt(lightPosInWorld,
-                                                glm::vec3(0.0f, 0.0f, 0.0f),  // Target
-                                                glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 lightView = glm::lookAt(lightPosInWorld, glm::vec3(0.0f, 0.0f, 0.0f),
+                                          glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
-        // Render scene to depth map
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
 
         depthShader.use();
-        depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-
+        // Установим lightSpaceMatrix в depthShader
+        if (depthShader.depth_lightSpaceMatrix >= 0) {
+            glUniformMatrix4fv(depthShader.depth_lightSpaceMatrix, 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
+        }
+        // Рисуем все «неотражающиеся» объекты в depth pass
         scene.drawAllDepth(depthShader, lightSpaceMatrix);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        //        3) Render Main Scene
+        // ===================== 3) Рендер основной сцены (на экран) =====================
         int screenWidth, screenHeight;
         glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
         glViewport(0, 0, screenWidth, screenHeight);
 
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Dark background for better visibility
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shaderProgram.use();
-
-        // Pass lightSpaceMatrix to main shader for shadow calculation
+        // lightSpaceMatrix для теней
         shaderProgram.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
-        // Update lighting uniforms
+        // свет
         shaderProgram.setVec3("lightPos", lightPosInWorld);
         shaderProgram.setVec3("viewPos", cameraPos);
 
-        // Bind shadow map to texture unit 1
+        // Привязываем shadowMap на юнит 1
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthMap);
         shaderProgram.setInt("shadowMap", 1);
 
-        // Bind dynamic cube map to texture unit 2
+        // Привязываем динамическую кубкарту на юнит 2
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_CUBE_MAP, dynamicCubeMap);
         shaderProgram.setInt("cubeMap", 2);
 
-        // Calculate view and projection matrices for the camera
-        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        float aspectRatio = static_cast<float>(screenWidth) / (screenHeight > 0 ? screenHeight : 1);
+        // Матрицы камеры для «обычного» рендера
+        glm::mat4 view  = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        float aspectRatio = (float)screenWidth / (float)std::max(screenHeight, 1);
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
 
-        // Render all models with the main shader
         scene.drawAll(shaderProgram, view, projection, dynamicCubeMap);
 
-        //        Begin/Render/End ImGui
+        // ===================== ImGui =====================
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Tools panel
+        // Панель инструментов
         show_tools(scene);
 
-        // Render ImGui
+        // Рендерим ImGui
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        //        Swap Buffers and End Frame
         glfwSwapBuffers(window);
     }
 
-    // --------------------- Cleanup Before Exit ---------------------
+    // Очистка
     glDeleteProgram(shaderProgram.ID);
     glDeleteProgram(depthShader.ID);
-    glDeleteProgram(cubeMapShader.ID);
     glDeleteTextures(1, &depthMap);
     glDeleteFramebuffers(1, &depthMapFBO);
     glDeleteTextures(1, &dynamicCubeMap);
@@ -1152,7 +1119,7 @@ int main() {
     return 0;
 }
 
-// --------------------- Implementation of Helper Functions ---------------------
+// --------------------- Реализация вспомогательных функций ---------------------
 void processInput(GLFWwindow* window, float deltaTime) {
     float cameraSpeed = 2.5f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -1203,71 +1170,57 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
         xoffset *= sensitivity;
         yoffset *= sensitivity;
 
-        // Update global yaw and pitch
-        extern float yaw;
-        extern float pitch;
-        yaw += xoffset;
+        yaw   += xoffset;
         pitch += yoffset;
 
-        if (pitch > 89.0f)
-            pitch = 89.0f;
-        if (pitch < -89.0f)
-            pitch = -89.0f;
+        if (pitch > 89.0f)  pitch = 89.0f;
+        if (pitch < -89.0f) pitch = -89.0f;
 
-        // Update cameraFront based on updated yaw and pitch
-        extern glm::vec3 cameraFront;
         cameraFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
         cameraFront.y = sin(glm::radians(pitch));
         cameraFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        cameraFront = glm::normalize(cameraFront);
+        cameraFront   = glm::normalize(cameraFront);
 
-        // Recalculate cameraRight and cameraUp
-        glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
-        extern glm::vec3 cameraRight, cameraUp;
-        cameraRight = glm::normalize(glm::cross(cameraFront, worldUp));
+        cameraRight = glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f, 1.0f, 0.0f)));
         cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
     }
 
-    // Pass to ImGui
+    // передаём в ImGui
     ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    // Pass to ImGui
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    // Pass to ImGui
     ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    // Pass to ImGui
     ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
 }
 
 void char_callback(GLFWwindow* window, unsigned int codepoint) {
-    // Pass to ImGui
     ImGui_ImplGlfw_CharCallback(window, codepoint);
 }
 
-// --------------------- Setup ImGui ---------------------
+// --------------------- ImGui ---------------------
 void setup_imgui(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+
     setup_style(ImGui::GetStyle(), io);
 
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
-    // Load font
+    // Загрузим шрифт
     io.Fonts->AddFontFromFileTTF("../assets/helvetica_regular.otf", 16.0f);
     io.FontDefault = io.Fonts->Fonts.back();
 
-    // Create font texture
     unsigned char* tex_pixels = nullptr;
     int tex_width, tex_height;
     io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
@@ -1286,12 +1239,12 @@ void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.FrameBorderSize = 1.0f;
     style.WindowRounding = 6.0f;
     style.ScrollbarRounding = 6.0f;
-    style.GrabRounding = 6.0f;
-    style.PopupRounding = 6.0f;
-    style.ChildRounding = 6.0f;
-    style.WindowPadding = ImVec2(15, 15);
-    style.FramePadding = ImVec2(10, 6);
-    style.ItemSpacing = ImVec2(10, 10);
+    style.GrabRounding     = 6.0f;
+    style.PopupRounding    = 6.0f;
+    style.ChildRounding    = 6.0f;
+    style.WindowPadding    = ImVec2(15, 15);
+    style.FramePadding     = ImVec2(10, 6);
+    style.ItemSpacing      = ImVec2(10, 10);
 
     ImVec4 buttonColor        = ImVec4(0.9f, 0.9f, 0.9f, 1.0f);
     ImVec4 buttonHoveredColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
@@ -1305,78 +1258,65 @@ void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.Colors[ImGuiCol_Text]          = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-// --------------------- ImGui Tools Window ---------------------
+// --------------------- Окно инструментов ImGui ---------------------
 void show_tools(Scene& scene) {
     static size_t activeModelIndex = 0;
 
     ImGui::Begin("Tools");
 
-    // Combo box for selecting active object
-    if (ImGui::BeginCombo("Active Object", scene.models[activeModelIndex]->name.c_str()))
-    {
-        for (size_t i = 0; i < scene.models.size(); ++i) {
-            bool isSelected = (activeModelIndex == i);
-            std::string label = scene.models[i]->name;
-            if (ImGui::Selectable(label.c_str(), isSelected))
-                activeModelIndex = i;
-            if (isSelected)
-                ImGui::SetItemDefaultFocus();
+    // Выбор активного объекта
+    if (!scene.models.empty()) {
+        if (activeModelIndex >= scene.models.size()) {
+            activeModelIndex = 0;
         }
-        ImGui::EndCombo();
+        std::string currentName = scene.models[activeModelIndex]->name;
+
+        if (ImGui::BeginCombo("Active Object", currentName.c_str())) {
+            for (size_t i = 0; i < scene.models.size(); ++i) {
+                bool isSelected = (activeModelIndex == i);
+                std::string label = scene.models[i]->name;
+                if (ImGui::Selectable(label.c_str(), isSelected))
+                    activeModelIndex = i;
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
     }
 
-    // Editing the active object
+    // Редактирование выбранного объекта
     if (activeModelIndex < scene.models.size()) {
         auto& model = scene.models[activeModelIndex];
-        std::string header = model->name;
-        if (ImGui::CollapsingHeader(header.c_str())) {
+        if (ImGui::CollapsingHeader(model->name.c_str())) {
             ImGui::Text("Transformation");
-
-            // Position
             ImGui::DragFloat3("Position", glm::value_ptr(model->transform.position), 0.1f);
-            // Rotation
             ImGui::DragFloat3("Rotation", glm::value_ptr(model->transform.rotation), 1.0f);
-            // Scale
             ImGui::DragFloat3("Scale",    glm::value_ptr(model->transform.scale),    0.1f);
 
             ImGui::Separator();
             ImGui::Text("Material");
-
-            // Object color
             ImGui::ColorEdit3("Color", glm::value_ptr(model->material.color));
 
-            // Load texture
+            // Кнопка загрузки текстуры (заглушка)
             if (ImGui::Button("Load Texture")) {
-                // Implement a file dialog here for user to select texture
-                // For simplicity, we'll use a fixed path
-                std::string texturePath = "../assets/uss.png"; // Example path
+                // Сюда можно вставить реальный file dialog
+                std::string texturePath = "../assets/uss.png";
                 GLuint texID = TextureManager::LoadTexture(texturePath);
                 if (texID != 0) {
                     model->material.textureID = texID;
                 }
             }
 
-            // Remove texture
+            // Удалить текстуру
             if (ImGui::Button("Remove Texture")) {
                 model->material.textureID = 0;
             }
 
             ImGui::Separator();
 
-            // Enable/Disable reflections
-            if (model->isRoom) {
-                ImGui::Text("Reflection (Per Face)");
-
-                // Array of face names
-                const char* faceNames[6] = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
-
-                for (int i = 0; i < 6; ++i) {
-                    std::string label = std::string("Face ") + faceNames[i];
-                    ImGui::Checkbox(label.c_str(), &model->faceReflectionFlags[i]);
-                }
-            }
-            else {
+            // Отражения
                 ImGui::Text("Reflection");
+                // Кнопка включения/выключения отражений
                 if (model->enableReflection) {
                     if (ImGui::Button("Disable Reflection")) {
                         model->enableReflection = false;
@@ -1387,7 +1327,6 @@ void show_tools(Scene& scene) {
                         model->enableReflection = true;
                     }
                 }
-            }
         }
     }
 
