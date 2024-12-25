@@ -510,7 +510,7 @@ public:
     void addModel(const std::shared_ptr<Model>& model) {
         int counter = 0;
         for(auto& ml: models) {
-            if (ml->name == model->name)
+            if (ml->name.find(model->name) != std::string::npos)
                 counter++;
         }
         if (counter)
@@ -779,25 +779,7 @@ int main() {
                 }
 
                 vec3 reflection = vec3(0.0);
-                if(anyFlag) {
-                    // Определяем, какая грань комнаты:
-                    int face = -1;
-                    if (abs(Normal.x - 1.0) < 0.1)      face = 0; // +X
-                    else if (abs(Normal.x + 1.0) < 0.1) face = 1; // -X
-                    else if (abs(Normal.y - 1.0) < 0.1) face = 2; // +Y
-                    else if (abs(Normal.y + 1.0) < 0.1) face = 3; // -Y
-                    else if (abs(Normal.z - 1.0) < 0.1) face = 4; // +Z
-                    else if (abs(Normal.z + 1.0) < 0.1) face = 5; // -Z
-
-                    if (face != -1 && faceReflectionFlags[face]) {
-                        reflection = texture(cubeMap, ReflectDir).rgb;
-                    }
-                }
-                else {
-                    // Если это объект, у которого все грани отражаются
                     reflection = texture(cubeMap, ReflectDir).rgb;
-                }
-
                 // Смешиваем отражение и основной цвет
                 // (число 0.3 означает «насколько сильно» подмешиваем отражение)
                 lighting = mix(lighting, reflection, 0.3);
@@ -932,19 +914,17 @@ int main() {
     cubeItem2->enableReflection   = true;
     scene.addModel(cubeItem2);
 
-    // 3) Сфера
     auto sphereItem = std::make_shared<Model>("../assets/Sphere.obj");
     sphereItem->transform.position = glm::vec3(-3.5f, 0.0f, -3.5f);
     sphereItem->enableReflection   = true;
     scene.addModel(sphereItem);
 
-    // 4) Плашка света (эмиссия)
-    auto lightPanel = std::make_shared<Model>("../assets/Plane.obj");
+    auto lightPanel = std::make_shared<Model>("../assets/Cube.obj");
     lightPanel->transform.position = glm::vec3(0.0f, 5.6f, -5.0f);
-    lightPanel->transform.scale    = glm::vec3(2.0f);
+    lightPanel->transform.scale    = glm::vec3(1.0f, 0.1f, 1.0f);
     lightPanel->transform.rotation = glm::vec3(180.0f, 0.0f, 0.0f);
     lightPanel->isLight            = true;
-    lightPanel->emissiveColor      = glm::vec3(1.0f, 1.0f, 0.8f);
+    lightPanel->emissiveColor      = glm::vec3(0.97f, 0.97f, 0.97f);
     scene.addModel(lightPanel);
 
     // Позиция света совпадает с center lightPanel
@@ -1335,15 +1315,6 @@ void show_tools(Scene& scene) {
             ImGui::Separator();
 
             // Отражения
-            if (model->isRoom) {
-                ImGui::Text("Reflection (Per Face)");
-                const char* faceNames[6] = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
-                for (int i = 0; i < 6; ++i) {
-                    std::string label = std::string("Face ") + faceNames[i];
-                    ImGui::Checkbox(label.c_str(), &model->faceReflectionFlags[i]);
-                }
-            }
-            else {
                 ImGui::Text("Reflection");
                 // Кнопка включения/выключения отражений
                 if (model->enableReflection) {
@@ -1356,7 +1327,6 @@ void show_tools(Scene& scene) {
                         model->enableReflection = true;
                     }
                 }
-            }
         }
     }
 
