@@ -34,7 +34,6 @@ GLuint CompileShader(GLenum type, const std::string& source) {
     }
     return shader;
 }
-
 struct ShaderProgram {
     GLuint ID;
     // Uniform locations для основного шейдера
@@ -148,7 +147,6 @@ struct ShaderProgram {
         glUniform1iv(faceReflectionFlags, 6, intFlags);
     }
 };
-
 // --------------------- Texture Manager ---------------------
 class TextureManager {
 public:
@@ -200,9 +198,7 @@ public:
 private:
     static std::unordered_map<std::string, GLuint> textures;
 };
-
 std::unordered_map<std::string, GLuint> TextureManager::textures;
-
 // --------------------- Geometric Structures ---------------------
 struct Mesh {
     std::vector<glm::vec3> vertices;
@@ -211,7 +207,6 @@ struct Mesh {
     std::vector<glm::vec3> colors;
     std::vector<unsigned int> indices;
 };
-
 struct Vertex {
     unsigned int posIndex;
     unsigned int texIndex;
@@ -221,7 +216,6 @@ struct Vertex {
         return std::tie(posIndex, texIndex, normIndex) < std::tie(other.posIndex, other.texIndex, other.normIndex);
     }
 };
-
 class Transform {
 public:
     glm::vec3 position;
@@ -239,7 +233,6 @@ public:
         return model;
     }
 };
-
 struct Material {
     glm::vec3 color;
     GLuint textureID;
@@ -247,7 +240,6 @@ struct Material {
     Material(const glm::vec3& col = glm::vec3(1.0f), GLuint texID = 0)
             : color(col), textureID(texID) {}
 };
-
 // --------------------- Model Class with VAO/VBO/EBO ---------------------
 class Model {
 public:
@@ -267,17 +259,20 @@ public:
     }
 
     // Конструктор: загрузка из .obj
-    Model(const std::string& objPath, const Material& mat = Material(), bool roomFlag = false)
-            : material(mat), isRoom(roomFlag)
-    {
+    Model(const std::string& objPath, const std::string& objName = "", const Material& mat = Material())
+            : material(mat){
         mesh = loadOBJ(objPath);
 
-        // Извлекаем имя файла (без пути и расширения)
-        size_t slashPos = objPath.find_last_of("/\\");
-        size_t dotPos   = objPath.find_last_of(".");
-        if (slashPos == std::string::npos) slashPos = 0; else slashPos++;
-        if (dotPos == std::string::npos) dotPos = objPath.size();
-        name = objPath.substr(slashPos, dotPos - slashPos);
+        if (objName.empty()) {
+            // Извлекаем имя файла (без пути и расширения)
+            size_t slashPos = objPath.find_last_of("/\\");
+            size_t dotPos = objPath.find_last_of(".");
+            if (slashPos == std::string::npos) slashPos = 0; else slashPos++;
+            if (dotPos == std::string::npos) dotPos = objPath.size();
+            name = objPath.substr(slashPos, dotPos - slashPos);
+        } else {
+            name = objName;
+        }
 
         setupBuffers();
     }
@@ -292,8 +287,7 @@ public:
     void draw(const ShaderProgram& shader,
               const glm::mat4& view,
               const glm::mat4& projection,
-              GLuint cubeMapTexture) const
-    {
+              GLuint cubeMapTexture) const{
         shader.use();
 
         glm::mat4 modelMatrix = transform.getMatrix();
@@ -501,7 +495,6 @@ public:
         glBindVertexArray(0);
     }
 };
-
 // --------------------- Scene Class ---------------------
 class Scene {
 public:
@@ -522,8 +515,7 @@ public:
     void drawAll(const ShaderProgram& shader,
                  const glm::mat4& view,
                  const glm::mat4& projection,
-                 GLuint cubeMapTexture) const
-    {
+                 GLuint cubeMapTexture) const{
         for (const auto& model : models) {
             model->draw(shader, view, projection, cubeMapTexture);
         }
@@ -531,8 +523,7 @@ public:
 
     // Отрисовать все модели в depth-проход (для построения карты теней)
     void drawAllDepth(const ShaderProgram& depthShader,
-                      const glm::mat4& lightSpaceMatrix) const
-    {
+                      const glm::mat4& lightSpaceMatrix) const{
         // Обычно мы не рисуем зеркально-отражающие объекты в depth pass
         // (или же можем рисовать, но это вопрос дизайна теней; в данном коде исключают отражающиеся)
         for (const auto& model : models) {
@@ -541,21 +532,20 @@ public:
         }
     }
 };
-
 // --------------------- Глобальные переменные камеры ---------------------
 Scene scene;
-glm::vec3 cameraPos(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos(0.0f, 20.0f, 30.0f);
 glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
 
 double lastX, lastY;
 float yaw = -90.0f;
-float pitch = 0.0f;
+float pitch = -25.0f;
 bool firstMouse = true;
 
 // --------------------- Объявление функций ---------------------
-void processInput(GLFWwindow* window, float deltaTime);
+void processInput(GLFWwindow* window, float deltaTime, std::shared_ptr<Model> model);
 void processCursorToggle(GLFWwindow* window);
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -566,6 +556,45 @@ void char_callback(GLFWwindow* window, unsigned int codepoint);
 void setup_imgui(GLFWwindow* window);
 void show_tools(Scene& scene);
 void setup_style(ImGuiStyle& style, ImGuiIO& io);
+GLuint loadCubemap(const std::string& path){
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (size_t i = 0; i < 6; i++){
+        unsigned char *data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+        if (data) {
+            GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                         0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        }
+        else {
+            stbi_image_free(data);
+        }
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+std::string ReadFileToString(const std::string& filePath) {
+    std::ifstream fileStream(filePath, std::ios::in);
+    if (!fileStream.is_open()) {
+        std::cerr << "Не удалось открыть файл: " << filePath << std::endl;
+        return "";
+    }
+
+    std::stringstream buffer;
+    buffer << fileStream.rdbuf();
+    fileStream.close();
+    return buffer.str();
+}
 
 // --------------------- main() ---------------------
 int main() {
@@ -611,225 +640,33 @@ int main() {
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCharCallback(window, char_callback);
+    cameraFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront.y = sin(glm::radians(pitch));
+    cameraFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront   = glm::normalize(cameraFront);
+
+    cameraRight = glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f, 1.0f, 0.0f)));
+    cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
 
     // --------------------- Шейдер для основного рендера (отражения, тени) ---------------------
-    std::string vertexShaderSource = R"(
-        #version 330 core
-        layout(location = 0) in vec3 aPos;
-        layout(location = 1) in vec3 aNormal;
-        layout(location = 2) in vec2 aTexCoord;
-        layout(location = 3) in vec3 aColor;
-
-        uniform mat4 uMVP;
-        uniform mat4 uModel;
-
-        // Для расчёта теней:
-        uniform mat4 lightSpaceMatrix;
-
-        out vec3 FragPos;
-        out vec3 Normal;
-        out vec2 TexCoord;
-        out vec3 VertexColor;
-        out vec4 FragPosLightSpace;
-        out vec3 ReflectDir;
-
-        uniform vec3 viewPos; // позиция камеры
-
-        void main() {
-            gl_Position = uMVP * vec4(aPos, 1.0);
-
-            // мировая позиция
-            FragPos = vec3(uModel * vec4(aPos, 1.0));
-            // нормаль
-            Normal = mat3(transpose(inverse(uModel))) * aNormal;
-            // UV
-            TexCoord = aTexCoord;
-            // цвет вершин
-            VertexColor = aColor;
-
-            // для теней
-            FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
-
-            // вычислим направление отражённого вектора (от камеры к фрагменту)
-            // I — вектор (FragPos - viewPos), но удобнее взять наоборот (viewPos - FragPos),
-            //   смотря как хотим интерпретировать.
-            // Тут берём I = normalize(FragPos - viewPos),
-            // потом reflect(I, N).
-            vec3 I = normalize(FragPos - viewPos);
-            ReflectDir = reflect(I, normalize(Normal));
-        }
-    )";
-
-    std::string fragmentShaderSource = R"(
-        #version 330 core
-        in vec3 FragPos;
-        in vec3 Normal;
-        in vec2 TexCoord;
-        in vec3 VertexColor;
-        in vec4 FragPosLightSpace;
-        in vec3 ReflectDir;
-
-        out vec4 FragColor;
-
-        // стандартные uniform'ы
-        uniform vec3 lightPos;
-        uniform vec3 viewPos;
-        uniform sampler2D texture1;
-
-        uniform bool isLight;
-        uniform vec3 emissiveColor;
-
-        uniform bool useVertexColor;
-        uniform bool hasTexture;
-        uniform vec3 objectColor;
-
-        // тени
-        uniform sampler2D shadowMap;
-        uniform mat4 lightSpaceMatrix;
-
-        // отражения
-        uniform bool enableReflection;
-        uniform samplerCube cubeMap;
-
-        // для отражений по граням (только для room)
-        uniform bool faceReflectionFlags[6]; // +X, -X, +Y, -Y, +Z, -Z
-
-        // Простая функция расчёта теней (PCF)
-        float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
-        {
-            vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-            projCoords = projCoords * 0.5 + 0.5;
-
-            // за границами shadowMap
-            if(projCoords.x < 0.0 || projCoords.x > 1.0 ||
-               projCoords.y < 0.0 || projCoords.y > 1.0 ||
-               projCoords.z < 0.0 || projCoords.z > 1.0)
-                return 0.0;
-
-            float shadow = 0.0;
-            vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-            for(int x = -1; x <= 1; ++x)
-            {
-                for(int y = -1; y <= 1; ++y)
-                {
-                    float closestDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-                    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
-                    if(projCoords.z - bias > closestDepth)
-                        shadow += 1.0;
-                }
-            }
-            shadow /= 9.0;
-            return shadow;
-        }
-
-        void main() {
-            // если это «источник света», рисуем просто эмиссивный цвет
-            if (isLight) {
-                FragColor = vec4(emissiveColor, 1.0);
-                return;
-            }
-
-            // ambient
-            vec3 ambient = 0.2 * vec3(1.0);
-
-            // diffuse
-            vec3 norm = normalize(Normal);
-            vec3 lightDir = normalize(lightPos - FragPos);
-            float diff = max(dot(norm, lightDir), 0.0);
-            vec3 diffuse = diff * vec3(1.0);
-
-            // specular
-            float specularStrength = 0.5;
-            vec3 viewDir = normalize(viewPos - FragPos);
-            vec3 reflectDirSpec = reflect(-lightDir, norm);
-            float spec = pow(max(dot(viewDir, reflectDirSpec), 0.0), 32);
-            vec3 specular = specularStrength * spec * vec3(1.0);
-
-            // затухание
-            float distance = length(lightPos - FragPos);
-            float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * (distance * distance));
-            diffuse *= attenuation;
-            specular *= attenuation;
-
-            // тень
-            float shadow = ShadowCalculation(FragPosLightSpace, norm, lightDir);
-
-            // цвет текстуры
-            vec3 textureColor = hasTexture ? texture(texture1, TexCoord).rgb : vec3(1.0);
-
-            // итоговый цвет без отражения
-            vec3 finalColor = objectColor;
-            if(useVertexColor) {
-                finalColor *= VertexColor;
-            }
-            finalColor *= textureColor;
-
-            // результирующее освещение без учёта отражений
-            vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * finalColor;
-
-            // добавим отражение
-            if(enableReflection) {
-                // Проверим, есть ли какие-то флаги (для комнаты)
-                bool anyFlag = false;
-                for(int i = 0; i < 6; ++i) {
-                    if(faceReflectionFlags[i]) {
-                        anyFlag = true;
-                        break;
-                    }
-                }
-
-                vec3 reflection = vec3(0.0);
-                    reflection = texture(cubeMap, ReflectDir).rgb;
-                // Смешиваем отражение и основной цвет
-                // (число 0.3 означает «насколько сильно» подмешиваем отражение)
-                lighting = mix(lighting, reflection, 0.3);
-            }
-
-            FragColor = vec4(lighting, 1.0);
-        }
-    )";
-
-    ShaderProgram shaderProgram(vertexShaderSource, fragmentShaderSource);
-
+    ShaderProgram shaderProgram(ReadFileToString("../assets/VS.glsl"), ReadFileToString("../assets/FS.glsl"));
     // --------------------- Шейдер для depth pass ---------------------
-    std::string depthVertexShaderSource = R"(
-        #version 330 core
-        layout(location = 0) in vec3 aPos;
-
-        uniform mat4 lightSpaceMatrix;
-        uniform mat4 model;
-
-        void main()
-        {
-            gl_Position = lightSpaceMatrix * model * vec4(aPos, 1.0);
-        }
-    )";
-
-    std::string depthFragmentShaderSource = R"(
-        #version 330 core
-        void main(){}
-    )";
-
-    ShaderProgram depthShader(depthVertexShaderSource, depthFragmentShaderSource);
-
+    ShaderProgram depthShader(ReadFileToString("../assets/DepthVS.glsl"), ReadFileToString("../assets/DepthFS.glsl"));
+    ShaderProgram skyboxShader(ReadFileToString("../assets/SkyboxVS.glsl"), ReadFileToString("../assets/SkyboxFS.glsl"));
     // --------------------- Включаем буфер глубины и culling ---------------------
     glEnable(GL_DEPTH_TEST);
-    glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
-
     // --------------------- FBO/Texture для shadow map ---------------------
-    const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
+    const unsigned int SHADOW_WIDTH = 8192, SHADOW_HEIGHT = 8192;
     GLuint depthMapFBO;
     glGenFramebuffers(1, &depthMapFBO);
 
     GLuint depthMap;
     glGenTextures(1, &depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOW_WIDTH, SHADOW_HEIGHT, 0,
-                 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    // Можно GL_CLAMP_TO_BORDER, если хотим жёсткое обрезание теней
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -867,12 +704,43 @@ int main() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // --------------------- Загружаем модели ---------------------
+    std::string texturePath = "../assets/uss.png";
+    GLuint texID = TextureManager::LoadTexture(texturePath);
+
+    // 2) Пара кубов
+    auto USS = std::make_shared<Model>("../assets/USS.obj", "USS Enterprise");
+    USS->transform.position = glm::vec3(1.0f, 3.0f, 0.0f);
+    USS->transform.rotation = glm::vec3(0.0f, 180.0f, 0.0f);
+    USS->transform.scale    = glm::vec3(0.5f, 0.5f, 0.5f);
+    USS->enableReflection   = false;
+    USS->material.textureID = texID;
+
+    scene.addModel(USS);
+
+
+    std::string cubemapPath = "../assets/cubemap/DayInTheClouds4k.jpg";
+
+    stbi_set_flip_vertically_on_load(false);
+    GLuint skyboxTexture = loadCubemap(cubemapPath);
+    float skyboxVertices[] = { -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,  -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f, 1.0f,  1.0f,  1.0f, 1.0f,  1.0f,  1.0f, 1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,  -1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f,  1.0f, -1.0f, 1.0f,  1.0f,  1.0f, 1.0f, -1.0f,  1.0f, 1.0f, -1.0f,  1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  1.0f, -1.0f,  -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,  1.0f, 1.0f,  1.0f,  1.0f, 1.0f,  1.0f,  1.0f, 1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,  -1.0f, -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f
+    };
+    GLuint skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBindVertexArray(0);
     // 1) Комната
-    auto room = std::make_shared<Model>("../assets/Room.obj", Material(), true);
+    auto room = std::make_shared<Model>("../assets/Room.obj", "",Material());
     room->material.color = glm::vec3(1.0f);
-    room->transform.position = glm::vec3(0.0f, 2.35f, 1.0f);
-    room->transform.scale = glm::vec3(5.0f, 3.3f, 14.0f);
-    room->enableReflection = true;
+    room->transform.position = glm::vec3(0.0f, -1.05f, 1.0f);
+    room->transform.scale = glm::vec3(50.0f, 0.1f, 50.0f);
+    room->enableReflection = false;
+    room->material.textureID = TextureManager::LoadTexture("../assets/field.hdr");
+
 
     // Раскрашиваем стены комнаты (просто пример)
     const glm::vec3 faceColors[6] = {
@@ -892,43 +760,33 @@ int main() {
             }
         }
     }
-    // Инвертируем нормали, если нужно
-    for (auto& n : room->mesh.normals) {
-        n = glm::normalize(n) * -1.0f;
-    }
     room->setupBuffers();
     scene.addModel(room);
 
-    // 2) Пара кубов
-    auto cubeItem = std::make_shared<Model>("../assets/Cube.obj");
-    cubeItem->transform.position = glm::vec3(1.0f, 0.0f, -3.6f);
-    cubeItem->transform.rotation = glm::vec3(0.0f, 8.0f, 0.0f);
-    cubeItem->transform.scale    = glm::vec3(0.5f, 0.95f, 0.5f);
-    cubeItem->enableReflection   = true;
-    scene.addModel(cubeItem);
+    auto Tree = std::make_shared<Model>("../assets/Tree.obj", "Tree");
+    Tree->transform.position = glm::vec3(-3.5f, 0.0f, -3.5f);
+    Tree->transform.scale = glm::vec3(0.005f, 0.005f, 0.005f);
+    Tree->enableReflection   = false;
+    Tree->material.textureID = TextureManager::LoadTexture("../assets/Tree/Tree.png");
+    scene.addModel(Tree);
 
-    auto cubeItem2 = std::make_shared<Model>("../assets/Cube.obj");
-    cubeItem2->transform.position = glm::vec3(-1.0f, -0.45f, -2.6f);
-    cubeItem2->transform.rotation = glm::vec3(0.0f, -4.0f, 0.0f);
-    cubeItem2->transform.scale    = glm::vec3(0.5f, 0.5f, 0.5f);
-    cubeItem2->enableReflection   = true;
-    scene.addModel(cubeItem2);
+    auto Capsule = std::make_shared<Model>("../assets/Capsule/Capsule.obj", "Capsule");
+    Capsule->transform.position = glm::vec3(-3.5f, 0.0f, -3.5f);
+    Capsule->transform.scale = glm::vec3(0.05f, 0.05f, 0.05f);
+    Capsule->enableReflection   = false;
+    Capsule->material.textureID = TextureManager::LoadTexture("../assets/Capsule/Capsule.png");
+    scene.addModel(Capsule);
 
-    auto sphereItem = std::make_shared<Model>("../assets/Sphere.obj");
-    sphereItem->transform.position = glm::vec3(-3.5f, 0.0f, -3.5f);
-    sphereItem->enableReflection   = true;
-    scene.addModel(sphereItem);
+    auto Sun = std::make_shared<Model>("../assets/Sphere.obj", "Sun");
+    Sun->transform.position = glm::vec3(0.0f, 22.0f, 10.0f);
+    Sun->transform.scale    = glm::vec3(1.0f, 1.0f, 1.0f);
+    Sun->transform.rotation = glm::vec3(180.0f, 0.0f, 0.0f);
+    Sun->isLight            = true;
+    Sun->emissiveColor      = glm::vec3(0.97f, 0.97f, 0.87f);
+    scene.addModel(Sun);
 
-    auto lightPanel = std::make_shared<Model>("../assets/Cube.obj");
-    lightPanel->transform.position = glm::vec3(0.0f, 5.6f, -5.0f);
-    lightPanel->transform.scale    = glm::vec3(1.0f, 0.1f, 1.0f);
-    lightPanel->transform.rotation = glm::vec3(180.0f, 0.0f, 0.0f);
-    lightPanel->isLight            = true;
-    lightPanel->emissiveColor      = glm::vec3(0.97f, 0.97f, 0.97f);
-    scene.addModel(lightPanel);
-
-    // Позиция света совпадает с center lightPanel
-    glm::vec3 lightPosInWorld = lightPanel->transform.position;
+    // Позиция света совпадает с center Sun
+    glm::vec3 lightPosInWorld = Sun->transform.position;
 
     // Матрицы «камер» для кубкарты
     std::vector<glm::mat4> captureViews = {
@@ -941,7 +799,11 @@ int main() {
     };
 
     glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);
-
+    float capsuleY = Capsule->transform.position.y; // Initialize to current y-position
+    bool isFalling = true;                          // Start by falling
+    float fallSpeed = 7.0f;                         // Units per second
+    float minY = -1.0f;                             // Minimum y-position
+    float maxY = USS->transform.position.y;
     // --------------------- Цикл рендера ---------------------
     while (!glfwWindowShouldClose(window)) {
         // Вычисляем deltaTime
@@ -952,10 +814,29 @@ int main() {
 
         glfwPollEvents();
         processCursorToggle(window);
-        processInput(window, deltaTime);
+        processInput(window, deltaTime, USS);
+        USS->transform.position = { cameraPos.x, cameraPos.y -9.0f, cameraPos.z -16.0f};
+        Capsule->transform.position = { cameraPos.x, cameraPos.y -10.0f, cameraPos.z -16.0f};
+        Capsule->transform.position.y += (int)Capsule->transform.position.y % 25;
 
-        // Обновляем позицию света (если нужно)
-        lightPosInWorld = lightPanel->transform.position;
+        glm::vec3 basePosition = glm::vec3(cameraPos.x, cameraPos.y - 10.0f, cameraPos.z - 16.0f);
+
+        // Update maxY based on USS's current y-position
+        maxY = USS->transform.position.y;
+
+        // Update capsuleY based on current movement direction
+        if (isFalling) {
+            capsuleY -= fallSpeed * deltaTime;
+            if (capsuleY <= minY) {
+                capsuleY = basePosition.y;
+            }
+        }
+
+        // Apply the updated y-position to the Capsule
+        Capsule->transform.position = glm::vec3(basePosition.x, capsuleY, basePosition.z);
+
+        // Обновляем позицию света
+        lightPosInWorld = Sun->transform.position;
 
         // ===================== 1) Рендер сцены в кубкарту =====================
         glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
@@ -1031,8 +912,8 @@ int main() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // ===================== 2) Генерация shadow map =====================
-        float near_plane = 1.0f, far_plane = 25.0f;
-        float orthoSize = 10.0f;
+        float near_plane = 1.0f, far_plane = 100.0f;
+        float orthoSize = 100.0f;
         glm::mat4 lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, near_plane, far_plane);
         glm::mat4 lightView = glm::lookAt(lightPosInWorld, glm::vec3(0.0f, 0.0f, 0.0f),
                                           glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1085,6 +966,33 @@ int main() {
 
         scene.drawAll(shaderProgram, view, projection, dynamicCubeMap);
 
+        // 2) Меняем функцию глубины, чтобы фрагменты skybox прошли, если глубина <= равна (GL_LEQUAL)
+        glDepthFunc(GL_LEQUAL);
+
+// Отключаем запись в z-буфер, чтобы skybox не «затирал» глубину
+        glDepthMask(GL_FALSE);
+
+        skyboxShader.use();
+// передаём projection и view (без трансляции)
+        glm::mat4 skyboxView = glm::mat4(glm::mat3(view)); // убираем позицию камеры
+        skyboxShader.setMat4("view", skyboxView);
+        skyboxShader.setMat4("projection", projection);
+
+// привязываем куб-карту
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
+// если юниформ называется skybox, то
+        skyboxShader.setInt("skybox", 0);
+
+// рендерим куб
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+// возвращаем настройки
+        glBindVertexArray(0);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
+
         // ===================== ImGui =====================
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -1100,7 +1008,6 @@ int main() {
         glfwSwapBuffers(window);
     }
 
-    // Очистка
     glDeleteProgram(shaderProgram.ID);
     glDeleteProgram(depthShader.ID);
     glDeleteTextures(1, &depthMap);
@@ -1120,22 +1027,30 @@ int main() {
 }
 
 // --------------------- Реализация вспомогательных функций ---------------------
-void processInput(GLFWwindow* window, float deltaTime) {
-    float cameraSpeed = 2.5f * deltaTime;
+void processInput(GLFWwindow* window, float deltaTime, std::shared_ptr<Model> model) {
+    auto speed_coef = 1.0f;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+        speed_coef = 4;
+    float cameraSpeed = 12.5f * deltaTime * speed_coef;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraFront * cameraSpeed;
+        cameraPos.z += cameraFront.z * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraFront * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        cameraPos.z -= cameraFront.z * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        auto c = glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        cameraPos -= c;
+        model->transform.rotation.y += c.x * 4;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        auto c = glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        cameraPos += c;
+        model->transform.rotation.y -= c.x * 4;
+    }
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         cameraPos += cameraUp * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         cameraPos -= cameraUp * cameraSpeed;
 }
-
 void processCursorToggle(GLFWwindow* window) {
     static bool pressed_flag = false;
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
@@ -1152,7 +1067,6 @@ void processCursorToggle(GLFWwindow* window) {
         }
     }
 }
-
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         if (firstMouse) {
@@ -1188,23 +1102,18 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     // передаём в ImGui
     ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
 }
-
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
-
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
 }
-
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
 }
-
 void char_callback(GLFWwindow* window, unsigned int codepoint) {
     ImGui_ImplGlfw_CharCallback(window, codepoint);
 }
-
 // --------------------- ImGui ---------------------
 void setup_imgui(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -1233,7 +1142,6 @@ void setup_imgui(GLFWwindow* window) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     io.Fonts->TexID = (void *)(intptr_t)tex;
 }
-
 void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.FrameRounding = 12.0f;
     style.FrameBorderSize = 1.0f;
@@ -1257,7 +1165,6 @@ void setup_style(ImGuiStyle& style, ImGuiIO& io) {
     style.Colors[ImGuiCol_Border]        = borderColor;
     style.Colors[ImGuiCol_Text]          = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
-
 // --------------------- Окно инструментов ImGui ---------------------
 void show_tools(Scene& scene) {
     static size_t activeModelIndex = 0;
